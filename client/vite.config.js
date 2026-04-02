@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5001',
+        target: 'https://event-management-9ft1.onrender.com',
         changeOrigin: true,
         secure: false,
       }

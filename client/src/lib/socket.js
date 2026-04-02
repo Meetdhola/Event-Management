@@ -1,10 +1,9 @@
 import { io } from 'socket.io-client';
-
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+import { SOCKET_URL } from '../apiConfig';
 
 export const socket = io(SOCKET_URL, {
     withCredentials: true,
-    autoConnect: true
+    transports: ['websocket', 'polling']
 });
 
 export const joinRoom = (room) => {

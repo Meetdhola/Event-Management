@@ -1,6 +1,7 @@
 import { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { API_BASE_URL } from '../apiConfig';
 
 const AuthContext = createContext();
 
@@ -11,7 +12,7 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     // Configure axios defaults
-    axios.defaults.baseURL = '/api';
+    axios.defaults.baseURL = API_BASE_URL;
 
     // Check if token exists on load
     useEffect(() => {
