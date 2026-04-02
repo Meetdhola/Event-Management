@@ -16,18 +16,39 @@ const ticketSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
-    is_checked_in: {
-        type: Boolean,
-        default: false
-    },
-    checked_in_at: {
-        type: Date,
-        default: null
-    },
-    gate: {
-        type: String,
-        default: null
-    }
+    attendees: [
+        {
+            name: {
+                type: String,
+                required: true
+            },
+            email: {
+                type: String,
+                required: true
+            },
+            phone: {
+                type: String,
+                required: true
+            },
+            is_checked_in: {
+                type: Boolean,
+                default: false
+            },
+            checked_in_at: {
+                type: Date,
+                default: null
+            },
+            checked_in_by: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+                default: null
+            },
+            gate: {
+                type: String,
+                default: null
+            }
+        }
+    ]
 });
 
 module.exports = mongoose.model('Ticket', ticketSchema);

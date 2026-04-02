@@ -87,13 +87,15 @@ const CreateEvent = () => {
 
     return (
         <div className="main-content">
-            <div className="max-w-2xl mx-auto px-4 pt-4 pb-28 space-y-6">
+            <div className={`mx-auto px-4 pt-4 pb-32 sm:pb-4 space-y-6 transition-all duration-500 ${step === 4 ? 'max-w-7xl' : 'max-w-2xl'}`}>
 
                 {/* Header Section */}
                 <div className="flex items-center justify-between px-1">
                     <div>
-                        <h1 className="text-2xl font-black text-white leading-tight uppercase tracking-widest italic font-serif transition-colors group-hover:text-primary">Create Event <span className="text-primary not-italic">✨</span></h1>
-                        <p className="text-[10px] text-white/40 mt-1 uppercase tracking-[0.4em] font-black">Fill in the details to host your next event • Secured</p>
+                        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
+                            create <span className="text-gradient-gold-soft italic font-serif">EVENT.</span>
+                        </h1>
+                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Fill in the details to host your next event • Secured</p>
                     </div>
                     <Link to="/dashboard" className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-primary/20 hover:text-primary transition-all group">
                         <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
@@ -105,12 +107,12 @@ const CreateEvent = () => {
                     {steps.map((s) => (
                         <button
                             key={s.id}
-                            className={`flex items-center gap-3 px-6 py-3 rounded-2xl border transition-all duration-500 whitespace-nowrap ${step >= s.id
-                                ? 'bg-primary/10 border-primary/20 text-primary shadow-[0_0_20px_rgba(212,175,55,0.05)]'
-                                : 'bg-white/[0.02] border-white/5 text-white/20'}`}
+                            className={`flex items-center gap-3 px-6 py-3 rounded-full border transition-all duration-500 whitespace-nowrap ${step >= s.id
+                                ? 'btn-luxury min-h-0 h-11 border-none px-6'
+                                : 'bg-white/[0.02] border-white/5 text-white/60'}`}
                             onClick={() => step > s.id && setStep(s.id)}
                         >
-                            <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2`}>
+                            <span className={`text-[11px] font-black uppercase tracking-widest flex items-center gap-2`}>
                                 {step > s.id ? (
                                     <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-background scale-110 shadow-lg">
                                         <Check size={12} strokeWidth={4} />
@@ -128,7 +130,7 @@ const CreateEvent = () => {
                     key={step}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="app-card p-8 md:p-10 relative overflow-hidden bg-zinc-900/40 backdrop-blur-3xl"
+                    className="app-card p-8 md:p-10 relative overflow-hidden bg-surface/40 backdrop-blur-3xl"
                 >
                     <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
@@ -138,9 +140,9 @@ const CreateEvent = () => {
                                 <div className="space-y-8">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="h-4 w-1 bg-primary rounded-full" />
-                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Basic details</p>
+                                        <p className="text-[11px] font-black text-white/70 uppercase tracking-[0.4em]">Basic details</p>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
                                         <Input
                                             label="Event Name"
                                             name="event_name"
@@ -152,14 +154,14 @@ const CreateEvent = () => {
                                             className="h-14 rounded-2xl"
                                         />
                                         <div className="space-y-2 group">
-                                            <label className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted ml-1 group-focus-within:text-primary transition-colors">Event Type</label>
+                                            <label className="text-[11px] uppercase tracking-[0.3em] font-bold text-muted ml-1 group-focus-within:text-primary transition-colors">Event Type <span className="text-red-500 ml-1 text-xs leading-none">*</span></label>
                                             <div className="relative">
                                                 <Layers size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors" />
                                                 <select
                                                     name="event_type"
                                                     value={event_type}
                                                     onChange={onChange}
-                                                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm font-bold text-white focus:outline-none focus:border-primary/40 transition-all appearance-none"
+                                                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-[11px] font-bold text-white focus:outline-none focus:border-primary/40 transition-all appearance-none"
                                                 >
                                                     <option value="Concert" className="bg-background">Concert</option>
                                                     <option value="Fest" className="bg-background">Fest</option>
@@ -170,14 +172,14 @@ const CreateEvent = () => {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted ml-1">Event Description</label>
+                                        <label className="text-[11px] uppercase tracking-[0.3em] font-bold text-muted ml-1">Event Description <span className="text-red-500 ml-1 text-xs leading-none">*</span></label>
                                         <textarea
                                             name="description"
                                             value={description}
                                             onChange={onChange}
                                             required
                                             rows="5"
-                                            className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 px-6 text-sm font-bold text-white placeholder:text-white/20 focus:outline-none focus:border-primary/40 transition-all resize-none"
+                                            className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 px-6 text-[11px] font-bold text-white placeholder:text-white/80 focus:outline-none focus:border-primary/40 transition-all resize-none"
                                             placeholder="Describe your event here..."
                                         />
                                     </div>
@@ -188,7 +190,7 @@ const CreateEvent = () => {
                                 <div className="space-y-8">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="h-4 w-1 bg-primary rounded-full" />
-                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Location & Timing</p>
+                                        <p className="text-[11px] font-black text-white/70 uppercase tracking-[0.4em]">Location & Timing</p>
                                     </div>
                                     <Input
                                         label="Event Venue"
@@ -200,7 +202,7 @@ const CreateEvent = () => {
                                         placeholder="Grand Plaza or City Stadium"
                                         className="h-14 rounded-2xl"
                                     />
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
                                         <Input
                                             label="Commencement"
                                             type="datetime-local"
@@ -238,7 +240,7 @@ const CreateEvent = () => {
                                 <div className="space-y-8">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="h-4 w-1 bg-primary rounded-full" />
-                                        <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em]">Event Image</p>
+                                        <p className="text-[11px] font-black text-white/70 uppercase tracking-[0.4em]">Event Image</p>
                                     </div>
                                     <Input
                                         label="Image URL"
@@ -262,9 +264,9 @@ const CreateEvent = () => {
                                         ) : (
                                             <div className="text-center p-10">
                                                 <div className="p-5 rounded-full bg-white/5 inline-block mb-4">
-                                                    <ImageIcon size={40} className="text-primary/20" />
+                                                    <ImageIcon size={40} className="text-primary/50" />
                                                 </div>
-                                                <p className="text-[10px] uppercase font-black tracking-widest text-white/20">Image Preview</p>
+                                                <p className="text-[11px] uppercase font-black tracking-widest text-white/80">Image Preview</p>
                                             </div>
                                         )}
                                         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -277,16 +279,16 @@ const CreateEvent = () => {
                                     <button
                                         type="button"
                                         onClick={() => setStep(step - 1)}
-                                        className="flex-1 h-16 rounded-2xl border border-white/5 text-white/40 font-black text-[10px] uppercase tracking-[0.3em] hover:bg-white/[0.03] hover:text-white transition-all flex items-center justify-center gap-3 group"
+                                        className="btn-ghost-luxury flex-1 h-16"
                                     >
-                                        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Back
+                                        <ArrowLeft size={16} className="mr-2" /> Back
                                     </button>
                                 )}
                                 <Button
                                     type="submit"
-                                    variant="prismatic"
+                                    variant="primary"
                                     isLoading={loading}
-                                    className="flex-1 sm:flex-[2] h-16 rounded-2.5xl text-[11px] font-black uppercase tracking-[0.4em] shadow-glow group"
+                                    className="btn-luxury flex-1 sm:flex-[2] h-16 italic"
                                 >
                                     {step === 3 ? 'Create Event' : 'Next Step'}
                                     {step < 3 && <ChevronRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
@@ -302,13 +304,13 @@ const CreateEvent = () => {
                             <LogisticsCart eventId={createdEventId} />
                             <div className="flex flex-col items-center gap-8 pt-8 border-t border-white/5">
                                 <div className="text-center">
-                                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.5em] mb-2 animate-pulse">Success</p>
+                                    <p className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-2 animate-pulse">Success</p>
                                     <h3 className="text-2xl font-black text-white">Event Created!</h3>
                                 </div>
                                 <Button
                                     onClick={() => navigate('/dashboard')}
                                     variant="prismatic"
-                                    className="px-14 h-16 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] shadow-elite"
+                                    className="px-14 h-16 rounded-2xl text-xs font-black uppercase tracking-[0.4em] shadow-elite"
                                 >
                                     Go to Dashboard
                                 </Button>
@@ -320,7 +322,7 @@ const CreateEvent = () => {
                 {/* Secure Note */}
                 <div className="flex items-center justify-center gap-3 opacity-20 py-10">
                     <ShieldCheck size={14} className="text-primary" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.5em] text-white">Securely Created & Encrypted</span>
+                    <span className="text-[11px] font-black uppercase tracking-[0.5em] text-white">Securely Created & Encrypted</span>
                 </div>
             </div>
         </div>

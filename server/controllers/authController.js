@@ -146,9 +146,22 @@ const getMe = async (req, res) => {
     res.status(200).json(req.user);
 };
 
+// @desc    Get all admins
+// @route   GET /api/auth/admins
+// @access  Private
+const getAdmins = async (req, res) => {
+    try {
+        const admins = await User.find({ role: 'Admin' }).select('name email role');
+        res.status(200).json(admins);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error: ' + error.message });
+    }
+};
+
 module.exports = {
     sendOTP,
     registerUser,
     loginUser,
     getMe,
+    getAdmins,
 };

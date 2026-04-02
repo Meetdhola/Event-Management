@@ -42,8 +42,8 @@ const MobileHeader = () => {
                     />
                 </div>
                 <div className="flex flex-col leading-none">
-                    <span className="text-xs font-black uppercase tracking-[0.25em] text-white">ELITE</span>
-                    <span className="text-[9px] font-semibold uppercase tracking-[0.2em] mt-0.5" style={{ color: 'rgba(212,175,55,0.6)' }}>
+                    <span className="text-[9px] font-black uppercase tracking-[0.25em] text-white">ELITE</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.2em] mt-0.5" style={{ color: 'rgba(212,175,55,0.6)' }}>
                         Events
                     </span>
                 </div>
@@ -58,7 +58,7 @@ const MobileHeader = () => {
             >
                 {/* Role badge */}
                 <span
-                    className="hidden sm:inline-block text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-full"
+                    className="hidden sm:inline-block text-[11px] font-bold uppercase tracking-widest px-2 py-1 rounded-full"
                     style={{
                         background: 'rgba(212,175,55,0.1)',
                         color: '#D4AF37',
@@ -79,7 +79,7 @@ const MobileHeader = () => {
                     {user?.avatar ? (
                         <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                     ) : (
-                        <span className="text-sm font-black" style={{ color: '#D4AF37' }}>
+                        <span className="text-[11px] font-black" style={{ color: '#D4AF37' }}>
                             {user.name?.[0]?.toUpperCase()}
                         </span>
                     )}

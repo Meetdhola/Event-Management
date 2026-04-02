@@ -45,17 +45,17 @@ const Login = () => {
                     </motion.div>
 
                     <div className="flex flex-col items-center">
-                        <Badge variant="primary" className="mb-6 px-4 py-1.5 uppercase tracking-[0.4em] font-black text-[10px] rounded-full">Secure Terminal</Badge>
-                        <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight leading-none mb-4 lowercase">
-                            Login <span className="text-primary italic font-serif">IDENTITY.</span>
+                        <Badge variant="primary" className="mb-6 px-4 py-1.5 uppercase tracking-[0.4em] font-black text-[11px] rounded-full">Secure Terminal</Badge>
+                        <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight leading-none mb-4 uppercase">
+                            login <span className="text-gradient-gold-soft italic font-serif">IDENTITY.</span>
                         </h1>
-                        <p className="text-white/40 font-bold uppercase tracking-[0.3em] text-[10px]">
+                        <p className="text-white/70 font-bold uppercase tracking-[0.3em] text-[11px]">
                             Gateway to High-Scale Architecture
                         </p>
                     </div>
                 </div>
 
-                <div className="app-card p-10 md:p-12 relative group bg-zinc-900/50 backdrop-blur-3xl border border-white/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] group">
+                <div className="app-card p-10 md:p-12 relative group bg-surface/50 backdrop-blur-3xl border border-white/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] group">
                     <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
                     <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
@@ -88,17 +88,17 @@ const Login = () => {
                             variant="prismatic"
                             type="submit"
                             isLoading={loading}
-                            className="w-full h-16 text-[11px] font-black uppercase tracking-[0.5em] rounded-2xl shadow-elite"
+                            className="w-full h-16 text-xs font-black uppercase tracking-[0.5em] rounded-2xl shadow-elite"
                         >
                             Login
                         </Button>
                     </form>
 
                     <div className="mt-12 text-center pt-8 border-t border-white/5">
-                        <p className="text-[10px] uppercase tracking-[0.3em] text-white/30 font-bold">
+                        <p className="text-[11px] uppercase tracking-[0.3em] text-white/90 font-bold">
                             New to the Infrastructure?
                         </p>
-                        <Link to="/register" className="group inline-flex items-center gap-2 mt-4 text-[10px] uppercase tracking-[0.4em] font-black text-primary hover:text-white transition-all">
+                        <Link to="/register" className="group inline-flex items-center gap-2 mt-4 text-[11px] uppercase tracking-[0.4em] font-black text-primary hover:text-white transition-all">
                             Request Registry <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                         </Link>
                     </div>
@@ -106,8 +106,8 @@ const Login = () => {
 
                 <div className="mt-16 text-center">
                     <div className="inline-flex items-center gap-4 px-6 py-2 rounded-full bg-white/[0.02] border border-white/5">
-                        <Shield className="w-3 h-3 text-primary/40" />
-                        <span className="text-[9px] text-white/30 tracking-[0.4em] font-black uppercase">End-to-End Encryption Active</span>
+                        <Shield className="w-3 h-3 text-primary/70" />
+                        <span className="text-[11px] text-white/90 tracking-[0.4em] font-black uppercase">End-to-End Encryption Active</span>
                     </div>
                 </div>
             </motion.div>

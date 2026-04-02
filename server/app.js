@@ -1,14 +1,24 @@
 const express = require('express');
 // const colors = require('colors');
-const dotenv = require('dotenv').config();
+const dotenv = require('dotenv').config({ path: '/Users/meetdhola/Downloads/Event Management/server/.env' });
 const { errorHandler } = require('./middleware/errorMiddleware'); // Need to create this or use simple one
 const connectDB = require('./config/db');
 const cors = require('cors');
+
+const http = require('http');
+const { Server } = require('socket.io');
 
 // Connect to Database
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: true,
+        credentials: true
+    }
+});
 
 // Request logger
 app.use((req, res, next) => {
@@ -23,6 +33,12 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Attach IO to request for role-specific notifications later
+app.use((req, res, next) => {
+    req.io = io;
+    next();
+});
+
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
@@ -34,9 +50,32 @@ app.use('/api/tickets', require('./routes/ticketRoutes'));
 app.use('/api/hiring', require('./routes/hiringRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 
+// Socket.io connection handler
+io.on('connection', (socket) => {
+    console.log(`User Connected: ${socket.id}`);
+
+    socket.on('join_room', (room) => {
+        socket.join(room);
+        console.log(`User joined room: ${room}`);
+    });
+
+    socket.on('volunteer_emergency', (data) => {
+        console.log('VOLUNTEER EMERGENCY RECEIVED:', data);
+        // Relay to admin room
+        io.to('admin_room').emit('volunteer_emergency', data);
+        // Also relay to event-specific managers if needed
+        io.to(`event_${data.eventId}`).emit('emergency_alert', data);
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`User Disconnected: ${socket.id}`);
+    });
+});
+
 // Simple error handler for now if not creating separate file
 app.use((err, req, res, next) => {
-    const statusCode = res.statusCode ? res.statusCode : 500;
+    console.error('GLOBAL ERROR HANDLER:', err);
+    const statusCode = res.statusCode && res.statusCode !== 200 ? res.statusCode : 500;
     res.status(statusCode);
     res.json({
         message: err.message,
@@ -46,4 +85,4 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5001;
 
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server started on port ${PORT}`));

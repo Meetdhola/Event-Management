@@ -18,6 +18,7 @@ import {
     Crown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from './ui/Components';
 
 const Sidebar = ({ isOpen, onClose }) => {
     const { user, logout } = useAuth();
@@ -72,7 +73,13 @@ const Sidebar = ({ isOpen, onClose }) => {
             label: 'Create Event',
             path: '/create-event',
             icon: PlusCircle,
-            roles: ['Admin', 'EventManager', 'Attendee']
+            roles: ['Admin', 'EventManager']
+        },
+        {
+            label: 'AI Assistant',
+            path: '/ai-center',
+            icon: Zap,
+            roles: ['Admin', 'EventManager']
         }
     ].filter(item => item.roles.includes(user.role));
 
@@ -101,11 +108,15 @@ const Sidebar = ({ isOpen, onClose }) => {
                             <Crown className="text-primary group-hover:rotate-[15deg] transition-transform duration-500" size={26} />
                             <span className="text-xl font-serif tracking-[0.3em] font-black text-white italic">ELITE</span>
                         </div>
-                        <span className="text-[8px] tracking-[0.7em] text-primary/40 font-black uppercase relative z-10">Global Network</span>
+                        <span className="text-[9px] tracking-[0.7em] text-primary/70 font-black uppercase relative z-10">Global Network</span>
                     </div>
-                    <button onClick={onClose} className="lg:hidden p-3 text-white/20 hover:text-primary rounded-[1.25rem] hover:bg-white/5 transition-all">
+                    <Button
+                        onClick={onClose}
+                        variant="ghost-luxury"
+                        className="lg:hidden w-10 h-10 p-0 text-white/80 hover:text-primary rounded-[1.25rem] border border-white/5 transition-all"
+                    >
                         <X size={20} />
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Navigation Section */}
@@ -119,14 +130,14 @@ const Sidebar = ({ isOpen, onClose }) => {
                                     to={item.path}
                                     className={`flex items-center justify-between group px-5 py-4 rounded-[1.5rem] transition-all duration-500 relative ${isActive
                                         ? 'bg-primary/5 text-primary border border-primary/20 shadow-[0_0_30px_rgba(212,175,55,0.05)]'
-                                        : 'text-white/40 hover:text-white hover:bg-white/[0.03]'
+                                        : 'text-white/70 hover:text-white hover:bg-white/[0.03]'
                                         }`}
                                 >
                                     <div className="flex items-center gap-5">
                                         <div className={`transition-all duration-500 ${isActive ? 'scale-110' : 'group-hover:scale-110 group-hover:text-primary'}`}>
                                             <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                                         </div>
-                                        <span className="text-[10px] font-black uppercase tracking-[0.4em] leading-none">{item.label}</span>
+                                        <span className="text-[11px] font-black uppercase tracking-[0.4em] leading-none">{item.label}</span>
                                     </div>
                                     {isActive && (
                                         <motion.div
@@ -150,29 +161,30 @@ const Sidebar = ({ isOpen, onClose }) => {
                         className="flex items-center gap-4 p-4 rounded-[1.5rem] bg-white/[0.02] border border-white/5 mb-6 transition-all hover:border-primary/30 group/profile overflow-hidden relative"
                     >
                         <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover/profile:opacity-100 transition-opacity duration-700" />
-                        <div className="w-11 h-11 rounded-[1.25rem] bg-zinc-900 border border-white/10 flex items-center justify-center text-primary group-hover/profile:scale-105 group-hover/profile:border-primary/40 transition-all text-xs font-black relative z-10 shadow-lg">
+                        <div className="w-11 h-11 rounded-[1.25rem] bg-zinc-900 border border-white/10 flex items-center justify-center text-primary group-hover/profile:scale-105 group-hover/profile:border-primary/40 transition-all text-[9px] font-black relative z-10 shadow-lg">
                             {user.name[0]}
                         </div>
                         <div className="overflow-hidden flex-1 relative z-10">
-                            <p className="text-[10px] font-black text-white uppercase tracking-widest truncate">{user.name}</p>
-                            <p className="text-[8px] text-primary font-black uppercase tracking-[0.3em] mt-1.5 flex items-center gap-1.5">
+                            <p className="text-[11px] font-black text-white uppercase tracking-widest truncate">{user.name}</p>
+                            <p className="text-[9px] text-primary font-black uppercase tracking-[0.3em] mt-1.5 flex items-center gap-1.5">
                                 <span className="w-1 h-1 rounded-full bg-primary animate-pulse" />
                                 {user.role}
                             </p>
                         </div>
-                        <ChevronRight size={14} className="text-white/20 group-hover/profile:text-primary group-hover/profile:translate-x-1 transition-all relative z-10" />
+                        <ChevronRight size={14} className="text-white/80 group-hover/profile:text-primary group-hover/profile:translate-x-1 transition-all relative z-10" />
                     </Link>
 
-                    <button
+                    <Button
+                        variant="danger"
                         onClick={logout}
-                        className="w-full flex items-center justify-center gap-4 px-3 py-5 rounded-[1.5rem] text-rose-500/60 hover:text-rose-500 hover:bg-rose-500/5 transition-all duration-500 border border-transparent hover:border-rose-500/20 group/logout"
+                        className="w-full h-14 rounded-[1.5rem] text-xs font-black uppercase tracking-[0.5em] group/logout"
                     >
-                        <LogOut size={18} className="group-hover/logout:-translate-x-1 transition-transform" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.5em]">Sign Out</span>
-                    </button>
+                        <LogOut size={18} className="mr-2 group-hover/logout:-translate-x-1 transition-transform" />
+                        Sign Out
+                    </Button>
 
                     <div className="mt-6 text-center">
-                        <span className="text-[7px] text-white/10 font-black uppercase tracking-[0.8em]">Elite Platform v2.4</span>
+                        <span className="text-[11px] text-white/70 font-black uppercase tracking-[0.8em]">Elite Platform v2.4</span>
                     </div>
                 </div>
             </aside>

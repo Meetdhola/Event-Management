@@ -31,6 +31,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { Button, Card, Badge } from '../components/ui/Components';
+import { socket, joinRoom, subscribeToNotifications } from '../lib/socket';
 
 const AdminDashboard = () => {
     const { section } = useParams();
@@ -51,9 +52,39 @@ const AdminDashboard = () => {
     const [logFilterStatus, setLogFilterStatus] = useState('All');
     const [systemResources, setSystemResources] = useState([]);
     const [editingResource, setEditingResource] = useState(null);
+    const [liveAlerts, setLiveAlerts] = useState([]);
 
     useEffect(() => {
         fetchAdminData();
+        
+        // Join admin global room
+        joinRoom('admin_room');
+
+        // Listen for emergencies
+        socket.on('volunteer_emergency', (data) => {
+            console.log('EMERGENCY RECEIVED:', data);
+            setLiveAlerts(prev => [{
+                id: Date.now(),
+                ...data,
+                type: 'EMERGENCY'
+            }, ...prev]);
+
+            toast.error(`EMERGENCY: ${data.volunteerName} at ${data.eventName}`, {
+                duration: 10000,
+                position: 'top-right',
+                icon: '🚨',
+                style: {
+                    background: '#ef4444',
+                    color: '#fff',
+                    fontWeight: 'black',
+                    border: '1px solid white'
+                }
+            });
+        });
+
+        return () => {
+            socket.off('volunteer_emergency');
+        };
     }, []);
 
     const fetchAdminData = async () => {
@@ -166,28 +197,39 @@ const AdminDashboard = () => {
         return matchesSearch && matchesStatus;
     });
 
-    if (loading) return (
-        <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-background">
-            <div className="relative">
-                <div className="h-20 w-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin shadow-glow" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="h-10 w-10 rounded-full bg-primary/20 blur-xl animate-pulse" />
+    if (loading) {
+        return (
+            <div className="min-h-[calc(100vh-80px)] bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
+                {/* Background Orbs */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
+
+                <div className="relative z-10 flex flex-col items-center gap-8">
+                    <div className="relative">
+                        <div className="h-20 w-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin shadow-[0_0_40px_rgba(212,175,55,0.2)]" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full bg-primary/20 blur-xl animate-pulse" />
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-2">
+                        <span className="text-[11px] font-black text-white/70 uppercase tracking-[0.5em] animate-pulse">Initializing System</span>
+                        <div className="h-[1px] w-32 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    }
 
     const StatCard = ({ title, value, icon: Icon, trend, colorClass }) => (
-        <div className="app-card p-6 flex flex-col gap-1 transition-all group cursor-default bg-zinc-900/40">
+        <div className="app-card p-6 flex flex-col gap-1 transition-all group cursor-default bg-surface/40">
             <div className="flex items-center justify-between mb-2">
-                <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${colorClass}`}>{title}</span>
+                <span className={`text-[11px] font-black uppercase tracking-[0.3em] ${colorClass}`}>{title}</span>
                 <Icon size={18} className={`${colorClass} opacity-40 group-hover:opacity-100 transition-opacity`} />
             </div>
             <div className="flex items-baseline justify-between pt-1">
                 <span className="text-3xl font-black text-white leading-none">{value}</span>
-                <ArrowUpRight size={14} className="text-white/10 group-hover:text-primary transition-colors" />
+                <ArrowUpRight size={14} className="text-white/70 group-hover:text-primary transition-colors" />
             </div>
-            <p className="text-[8px] font-bold text-white/20 uppercase tracking-[0.4em] mt-3">{trend}</p>
+            <p className="text-[9px] font-bold text-white/80 uppercase tracking-[0.4em] mt-3">{trend}</p>
         </div>
     );
 
@@ -203,13 +245,13 @@ const AdminDashboard = () => {
                     >
                         <div className="flex flex-col gap-5">
                             <div className="relative group">
-                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-primary transition-colors" size={16} />
+                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/80 group-focus-within:text-primary transition-colors" size={16} />
                                 <input
                                     type="text"
                                     placeholder="Filter system entities..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-14 pr-6 text-[11px] font-black uppercase tracking-widest text-white placeholder:text-white/10 focus:outline-none focus:border-primary/20 transition-all"
+                                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-14 pr-6 text-xs font-black uppercase tracking-widest text-white placeholder:text-white/80 focus:outline-none focus:border-primary/20 transition-all"
                                 />
                             </div>
                             <div className="flex flex-wrap gap-2 px-1">
@@ -217,9 +259,9 @@ const AdminDashboard = () => {
                                     <button
                                         key={role}
                                         onClick={() => setFilterRole(role)}
-                                        className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${filterRole === role
-                                            ? 'btn-prismatic text-primary shadow-glow'
-                                            : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10 border border-white/5'
+                                        className={`px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${filterRole === role
+                                            ? 'btn-luxury min-h-0 h-10 px-6'
+                                            : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10 border border-white/5'
                                             }`}
                                     >
                                         {role === 'EventManager' ? 'Managers' : role}
@@ -232,25 +274,25 @@ const AdminDashboard = () => {
                             {filteredUsers.length === 0 ? (
                                 <div className="py-24 flex flex-col items-center justify-center app-card bg-zinc-900/40 border-dashed opacity-30">
                                     <Users size={48} className="mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.4em]">No matching entities found</p>
+                                    <p className="text-[11px] font-black uppercase tracking-[0.4em]">No matching entities found</p>
                                 </div>
                             ) : (
                                 filteredUsers.map((user) => (
                                     <div key={user._id} className="app-card p-5 group flex items-center justify-between gap-6 hover:border-primary/30 transition-all">
                                         <div className="flex items-center gap-5 flex-1 min-w-0">
                                             <div className="relative">
-                                                <div className="w-12 h-12 rounded-[1.25rem] bg-zinc-900 border border-white/10 flex items-center justify-center font-black text-primary text-sm shadow-xl group-hover:scale-105 transition-transform">
+                                                <div className="w-12 h-12 rounded-[1.25rem] bg-zinc-900 border border-white/10 flex items-center justify-center font-black text-primary text-[11px] shadow-xl group-hover:scale-105 transition-transform">
                                                     {user.name[0]}
                                                 </div>
                                                 {user.is_approved && <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-zinc-900 shadow-glow flex items-center justify-center"><CheckCircle2 size={8} className="text-white" /></div>}
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center gap-3 mb-2">
-                                                    <h3 className="text-[12px] font-black text-white uppercase tracking-widest leading-none">{user.name}</h3>
+                                                    <h3 className="text-xs font-black text-white uppercase tracking-widest leading-none">{user.name}</h3>
                                                     <select
                                                         value={user.role}
                                                         onChange={(e) => handleUpdateRole(user._id, e.target.value)}
-                                                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[8px] font-black text-primary uppercase focus:outline-none focus:border-primary/40 transition-all cursor-pointer"
+                                                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[11px] font-black text-primary uppercase focus:outline-none focus:border-primary/40 transition-all cursor-pointer"
                                                     >
                                                         {['Admin', 'EventManager', 'Vendor', 'Volunteer', 'Attendee', 'Client'].map(r => (
                                                             <option key={r} value={r} className="bg-zinc-900">{r}</option>
@@ -258,16 +300,16 @@ const AdminDashboard = () => {
                                                     </select>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-[8px] text-primary/60 font-black uppercase tracking-widest">{user.role}</span>
+                                                    <span className="text-[9px] text-primary/60 font-black uppercase tracking-widest">{user.role}</span>
                                                     <span className="w-1 h-1 rounded-full bg-white/10" />
-                                                    <span className="text-[9px] text-white/30 font-bold tracking-tight truncate">{user.email}</span>
+                                                    <span className="text-[11px] text-white/90 font-bold tracking-tight truncate">{user.email}</span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             {!user.is_approved && ['EventManager', 'Vendor', 'Volunteer'].includes(user.role) ? (
                                                 <div className="flex gap-2">
-                                                    <button onClick={() => handleApprove(user._id)} className="h-10 px-4 rounded-xl bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20 text-[9px] font-black uppercase tracking-widest">
+                                                    <button onClick={() => handleApprove(user._id)} className="btn-luxury h-10 px-4 min-h-0 rounded-xl">
                                                         Verify
                                                     </button>
                                                     <button onClick={() => handleReject(user._id)} className="p-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-all border border-rose-500/20">
@@ -278,7 +320,7 @@ const AdminDashboard = () => {
                                                 <div className="flex items-center gap-4">
                                                     <Badge
                                                         variant={user.status === 'blocked' ? 'danger' : user.is_approved ? 'success' : 'warning'}
-                                                        className="px-3 py-1 text-[8px] font-black uppercase tracking-widest rounded-lg"
+                                                        className="px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg"
                                                     >
                                                         {user.status === 'blocked' ? 'Revoked' : user.is_approved ? 'Active' : 'Pending'}
                                                     </Badge>
@@ -306,13 +348,13 @@ const AdminDashboard = () => {
                         className="space-y-6"
                     >
                         <div className="relative group">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-primary transition-colors" size={16} />
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/80 group-focus-within:text-primary transition-colors" size={16} />
                             <input
                                 type="text"
                                 placeholder="Search the Elite Archive..."
                                 value={logSearchTerm}
                                 onChange={(e) => setLogSearchTerm(e.target.value)}
-                                className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-14 pr-6 text-[11px] font-black uppercase tracking-widest text-white placeholder:text-white/10 focus:outline-none focus:border-primary/20 transition-all"
+                                className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-14 pr-6 text-xs font-black uppercase tracking-widest text-white placeholder:text-white/80 focus:outline-none focus:border-primary/20 transition-all"
                             />
                         </div>
 
@@ -320,7 +362,7 @@ const AdminDashboard = () => {
                             {filteredEvents.length === 0 ? (
                                 <div className="py-24 flex flex-col items-center justify-center app-card bg-zinc-900/40 border-dashed opacity-30">
                                     <Activity size={48} className="mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.4em]">Archive is empty or search failed</p>
+                                    <p className="text-[11px] font-black uppercase tracking-[0.4em]">Archive is empty or search failed</p>
                                 </div>
                             ) : (
                                 filteredEvents.map((event) => (
@@ -335,7 +377,7 @@ const AdminDashboard = () => {
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-r from-background/40 to-transparent" />
                                                 <div className="absolute top-4 left-4">
-                                                    <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white/80 bg-black/60 backdrop-blur-md px-2 py-1 rounded-sm border border-white/10 italic">Archive</span>
+                                                    <span className="text-[9px] font-black uppercase tracking-[0.4em] text-white/80 bg-black/60 backdrop-blur-md px-2 py-1 rounded-sm border border-white/10 italic">Archive</span>
                                                 </div>
                                             </div>
 
@@ -344,13 +386,13 @@ const AdminDashboard = () => {
                                                 <div className="flex items-start justify-between">
                                                     <div>
                                                         <div className="flex items-center gap-2 mb-2">
-                                                            <span className="text-[8px] font-black text-primary uppercase tracking-[0.5em] italic font-serif opacity-70">Past Deployment</span>
+                                                            <span className="text-[9px] font-black text-primary uppercase tracking-[0.5em] italic font-serif opacity-70">Past Deployment</span>
                                                             <div className="w-1 h-1 rounded-full bg-primary/40" />
-                                                            <span className="text-[8px] text-white/20 font-bold uppercase tracking-widest">#{event._id.slice(-6).toUpperCase()}</span>
+                                                            <span className="text-[9px] text-white/80 font-bold uppercase tracking-widest">#{event._id.slice(-6).toUpperCase()}</span>
                                                         </div>
                                                         <h3 className="text-2xl md:text-3xl font-serif text-white italic leading-none group-hover:text-primary transition-colors tracking-tight uppercase">{event.event_name}</h3>
-                                                        <p className="text-[9px] text-white/30 font-black uppercase tracking-widest mt-3 flex items-center gap-2">
-                                                            <Zap size={10} className="text-primary/40" />
+                                                        <p className="text-[11px] text-white/90 font-black uppercase tracking-widest mt-3 flex items-center gap-2">
+                                                            <Zap size={10} className="text-primary/70" />
                                                             ID: {event.event_manager_id?._id?.slice(-8).toUpperCase() || 'EXTERNAL'}
                                                         </p>
                                                     </div>
@@ -372,15 +414,15 @@ const AdminDashboard = () => {
                                                 </div>
 
                                                 <div className="flex flex-wrap items-center gap-6 pt-2">
-                                                    <div className="flex items-center gap-2.5 text-[10px] text-white/40 font-black uppercase tracking-widest">
-                                                        <Calendar size={14} className="text-primary/40" />
+                                                    <div className="flex items-center gap-2.5 text-[11px] text-white/70 font-black uppercase tracking-widest">
+                                                        <Calendar size={14} className="text-primary/70" />
                                                         {new Date(event.start_date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                                     </div>
-                                                    <div className="flex items-center gap-2.5 text-[10px] text-white/40 font-black uppercase tracking-widest">
-                                                        <MapPin size={14} className="text-primary/40" />
+                                                    <div className="flex items-center gap-2.5 text-[11px] text-white/70 font-black uppercase tracking-widest">
+                                                        <MapPin size={14} className="text-primary/70" />
                                                         {event.venue || 'Global Locale'}
                                                     </div>
-                                                    <div className="flex items-center gap-2.5 text-[10px] text-white/40 font-black uppercase tracking-widest ml-auto">
+                                                    <div className="flex items-center gap-2.5 text-[11px] text-white/70 font-black uppercase tracking-widest ml-auto">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-primary/20" />
                                                         DEPLOYED
                                                     </div>
@@ -406,39 +448,39 @@ const AdminDashboard = () => {
                                 <div key={resource._id} className="app-card p-6 group hover:border-primary/20 transition-all bg-zinc-900/40">
                                     <div className="flex justify-between items-start mb-6">
                                         <div>
-                                            <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-1">{resource.category}</p>
-                                            <h3 className="text-sm font-black text-white uppercase tracking-widest">{resource.name}</h3>
+                                            <p className="text-[11px] font-black text-primary uppercase tracking-[0.4em] mb-1">{resource.category}</p>
+                                            <h3 className="text-[11px] font-black text-white uppercase tracking-widest">{resource.name}</h3>
                                         </div>
                                         <div className="p-2 rounded-lg bg-white/5 border border-white/5">
-                                            <Zap size={14} className="text-primary/40" />
+                                            <Zap size={14} className="text-primary/70" />
                                         </div>
                                     </div>
 
                                     {editingResource === resource._id ? (
                                         <div className="space-y-4 pt-2 border-t border-white/5">
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="space-y-1.5">
-                                                    <label className="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">Base Price</label>
+                                                    <label className="text-[9px] font-black text-white/80 uppercase tracking-widest ml-1">Base Price</label>
                                                     <input
                                                         type="number"
                                                         defaultValue={resource.base_price}
                                                         onBlur={(e) => handleUpdateResource(resource._id, { base_price: Number(e.target.value) })}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-primary/40 transition-all"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-[9px] font-bold text-white focus:outline-none focus:border-primary/40 transition-all"
                                                     />
                                                 </div>
                                                 <div className="space-y-1.5">
-                                                    <label className="text-[8px] font-black text-white/20 uppercase tracking-widest ml-1">Capacity</label>
+                                                    <label className="text-[9px] font-black text-white/80 uppercase tracking-widest ml-1">Capacity</label>
                                                     <input
                                                         type="number"
                                                         defaultValue={resource.capacity_per_unit}
                                                         onBlur={(e) => handleUpdateResource(resource._id, { capacity_per_unit: Number(e.target.value) })}
-                                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs font-bold text-white focus:outline-none focus:border-primary/40 transition-all"
+                                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-[9px] font-bold text-white focus:outline-none focus:border-primary/40 transition-all"
                                                     />
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={() => setEditingResource(null)}
-                                                className="w-full py-2.5 rounded-xl btn-prismatic text-primary text-[10px] font-black uppercase tracking-widest shadow-glow"
+                                                className="w-full py-2.5 rounded-xl btn-prismatic text-primary text-[11px] font-black uppercase tracking-widest shadow-glow"
                                             >
                                                 Confirm Calibration
                                             </button>
@@ -447,17 +489,17 @@ const AdminDashboard = () => {
                                         <div className="flex items-center justify-between pt-4 border-t border-white/5">
                                             <div className="flex gap-6">
                                                 <div>
-                                                    <p className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em] mb-1">Standard Rate</p>
-                                                    <p className="text-sm font-black text-white">₹{resource.base_price}<span className="text-[10px] text-white/30 ml-1">/{resource.unit}</span></p>
+                                                    <p className="text-[11px] font-black text-white/80 uppercase tracking-[0.2em] mb-1">Standard Rate</p>
+                                                    <p className="text-[11px] font-black text-white">₹{resource.base_price}<span className="text-[11px] text-white/90 ml-1">/{resource.unit}</span></p>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[7px] font-black text-white/20 uppercase tracking-[0.2em] mb-1">AI Capacity</p>
-                                                    <p className="text-sm font-black text-white">{resource.capacity_per_unit}<span className="text-[10px] text-white/30 ml-1">nodes/unit</span></p>
+                                                    <p className="text-[11px] font-black text-white/80 uppercase tracking-[0.2em] mb-1">AI Capacity</p>
+                                                    <p className="text-[11px] font-black text-white">{resource.capacity_per_unit}<span className="text-[11px] text-white/90 ml-1">nodes/unit</span></p>
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={() => setEditingResource(resource._id)}
-                                                className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/20 hover:text-primary transition-all"
+                                                className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/80 hover:text-primary transition-all"
                                             >
                                                 <Activity size={16} />
                                             </button>
@@ -477,7 +519,7 @@ const AdminDashboard = () => {
                         animate={{ opacity: 1, y: 0 }}
                         className="space-y-8"
                     >
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <StatCard
                                 title="Users"
                                 value={stats.totalUsers}
@@ -503,33 +545,66 @@ const AdminDashboard = () => {
                                 title="Status"
                                 value="Online"
                                 icon={Activity}
-                                colorClass="text-emerald-500"
-                                trend="System is healthy"
+                                colorClass={liveAlerts.length > 0 ? 'text-rose-500' : 'text-emerald-500'}
+                                trend={liveAlerts.length > 0 ? `${liveAlerts.length} Active Alerts` : 'System is healthy'}
                             />
                         </div>
+
+                        {/* Live Alerts Panel */}
+                        {liveAlerts.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-1">
+                                    <h3 className="section-title !mb-0 text-[11px] text-rose-500 font-black animate-pulse flex items-center gap-2">
+                                        <ShieldAlert size={14} /> LIVE EMERGENCY LOG
+                                    </h3>
+                                    <button onClick={() => setLiveAlerts([])} className="text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">Clear</button>
+                                </div>
+                                <div className="space-y-3">
+                                    {liveAlerts.map(alert => (
+                                        <div key={alert.id} className="app-card p-4 flex items-center justify-between gap-4 bg-rose-500/10 border-rose-500/30 group animate-in slide-in-from-right duration-500">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-[1.25rem] bg-rose-500/20 border border-rose-500/40 flex items-center justify-center font-black text-rose-500 text-[11px] animate-pulse">
+                                                    <AlertCircle size={18} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-black text-white uppercase tracking-widest leading-none mb-1.5">{alert.volunteerName}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="danger" className="text-[9px] px-1.5 py-0.5 rounded-md uppercase font-black italic">SOS SIGNAL</Badge>
+                                                        <span className="text-[9px] text-white/70 font-bold uppercase">{alert.eventName} • {alert.location}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black text-white/50 uppercase tracking-widest">{new Date(alert.timestamp).toLocaleTimeString()}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Recent Entities Panel */}
                         <div className="space-y-4">
                             <div className="flex items-center justify-between px-1">
-                                <h3 className="section-title !mb-0 text-sm opacity-60">Recent Users</h3>
-                                <button onClick={() => navigate('/admin/users')} className="text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors">View All Users</button>
+                                <h3 className="section-title !mb-0 text-[11px] opacity-60">Recent Users</h3>
+                                <button onClick={() => navigate('/admin/users')} className="text-[11px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors">View All Users</button>
                             </div>
                             <div className="space-y-3">
                                 {users.slice(0, 4).map(user => (
                                     <div key={user._id} className="app-card p-4 flex items-center justify-between gap-4 bg-zinc-900/30 group cursor-default hover:border-primary/20 transition-all">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-[1.25rem] bg-zinc-900 border border-white/5 flex items-center justify-center font-black text-primary/80 group-hover:text-primary text-[10px] transition-colors">
+                                            <div className="w-10 h-10 rounded-[1.25rem] bg-zinc-900 border border-white/5 flex items-center justify-center font-black text-primary/80 group-hover:text-primary text-[11px] transition-colors">
                                                 {user.name[0]}
                                             </div>
                                             <div>
-                                                <p className="text-[11px] font-black text-white uppercase tracking-widest leading-none mb-1.5">{user.name}</p>
+                                                <p className="text-xs font-black text-white uppercase tracking-widest leading-none mb-1.5">{user.name}</p>
                                                 <div className="flex items-center gap-2">
-                                                    <Badge variant="ghost" className="text-[7px] px-1.5 py-0.5 rounded-md bg-white/5 text-white/20 group-hover:text-primary group-hover:bg-primary/5 transition-all uppercase font-black">{user.role}</Badge>
-                                                    <span className="text-[8px] text-white/10 font-bold uppercase">{new Date().toLocaleDateString()}</span>
+                                                    <Badge variant="ghost" className="text-[11px] px-1.5 py-0.5 rounded-md bg-white/5 text-white/80 group-hover:text-primary group-hover:bg-primary/5 transition-all uppercase font-black">{user.role}</Badge>
+                                                    <span className="text-[9px] text-white/70 font-bold uppercase">{new Date().toLocaleDateString()}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <ChevronRight size={14} className="text-white/10 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                        <ChevronRight size={14} className="text-white/70 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                                     </div>
                                 ))}
                             </div>
@@ -540,17 +615,19 @@ const AdminDashboard = () => {
     };
 
     return (
-        <div className="main-content px-3 pb-28 sm:pb-4">
+        <div className="main-content px-3 pb-32 sm:pb-4">
             <div className="max-w-4xl mx-auto space-y-8">
 
                 {/* Infrastructure Header */}
                 <div className="flex items-center justify-between px-1">
                     <div>
-                        <h1 className="text-2xl font-black text-white leading-tight uppercase tracking-widest italic font-serif">Admin Control <span className="text-primary not-italic">🛡️</span></h1>
-                        <p className="text-[10px] text-white/40 mt-1 uppercase tracking-[0.4em] font-black">Manage members, events, and settings • Level 5 access</p>
+                        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
+                            admin <span className="text-gradient-gold-soft italic font-serif">CONTROL.</span>
+                        </h1>
+                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Manage members, events, and settings • Level 5 access</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Badge variant="success" className="h-8 rounded-full px-4 text-[8px] font-black shadow-glow animate-pulse">Secure Connect</Badge>
+                        <Badge variant="success" className="h-8 rounded-full px-4 text-[9px] font-black shadow-glow animate-pulse">Secure Connect</Badge>
                     </div>
                 </div>
 
@@ -565,9 +642,9 @@ const AdminDashboard = () => {
                         <button
                             key={tab.id}
                             onClick={() => navigate(`/admin/${tab.id}`)}
-                            className={`flex-none px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] transition-all duration-500 whitespace-nowrap border ${(section === tab.id || (!section && tab.id === 'overview'))
-                                ? 'bg-primary/10 border-primary text-primary shadow-[0_0_20px_rgba(212,175,55,0.1)]'
-                                : 'bg-white/5 border-white/5 text-white/40 hover:text-white hover:bg-white/10'}`}
+                            className={`flex-none px-8 py-4 rounded-full text-[11px] font-black uppercase tracking-[0.3em] transition-all duration-500 whitespace-nowrap border ${(section === tab.id || (!section && tab.id === 'overview'))
+                                ? 'btn-luxury border-none min-h-0 h-12 shadow-glow'
+                                : 'bg-white/5 border-white/5 text-white/70 hover:text-white hover:bg-white/10'}`}
                         >
                             {tab.label}
                         </button>

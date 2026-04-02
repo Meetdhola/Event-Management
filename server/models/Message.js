@@ -17,12 +17,12 @@ const singleMessageSchema = new mongoose.Schema({
 });
 
 const messageSchema = new mongoose.Schema({
-    client_id: {
+    user1_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
-    manager_id: {
+    user2_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
@@ -30,7 +30,7 @@ const messageSchema = new mongoose.Schema({
     messages: [singleMessageSchema]
 }, { timestamps: true });
 
-// Ensure a unique chat thread between a specific client and manager
-messageSchema.index({ client_id: 1, manager_id: 1 }, { unique: true });
+// Ensure a unique chat thread between two specific users
+messageSchema.index({ user1_id: 1, user2_id: 1 }, { unique: true });
 
 module.exports = mongoose.model('Message', messageSchema);

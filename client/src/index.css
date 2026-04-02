@@ -10,7 +10,8 @@
     --background: #0C0C0E;
     --surface: #12141A;
     --copy: #F5F5F5;
-    --muted: #B8B8B8;
+    --muted: #D4D4D4;
+    /* Made brighter from B8B8B8 */
 
     --primary: #D4AF37;
     /* Champagne Gold */
@@ -26,6 +27,22 @@
     --radius-md: 12px;
 
     color-scheme: dark;
+  }
+
+  /* Fix for chrome dark mode date picker icons */
+  ::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.8;
+  }
+
+  /* Fix for chrome autofill background destroying dark mode inputs */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #12141A inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
   }
 
   /* Force dark mode behavior since it's a luxury brand primary style */
@@ -57,7 +74,8 @@ h4,
   }
 
   .main-content {
-    padding-bottom: 6rem;
+    padding-bottom: 8rem;
+    /* 128px for Bottom Navigation space on mobile */
     /* For Bottom Navigation */
     @apply lg:pb-0;
   }
@@ -81,12 +99,12 @@ h4,
   }
 
   .page-greeting-sub {
-    @apply text-sm text-white/40 mt-1 font-medium;
+    @apply text-[11px] text-white/70 mt-1 font-medium;
   }
 
   /* Pill-shaped search bar (like screenshot) */
   .search-pill {
-    @apply w-full flex items-center gap-3 px-4 py-3 rounded-full text-sm text-white/60 outline-none transition-all;
+    @apply w-full flex items-center gap-3 px-4 py-3 rounded-full text-[11px] text-white/90 outline-none transition-all;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
@@ -97,7 +115,7 @@ h4,
   }
 
   .search-pill input {
-    @apply bg-transparent outline-none text-white placeholder:text-white/30 w-full text-sm;
+    @apply bg-transparent outline-none text-white placeholder:text-white/90 w-full text-[11px];
   }
 
   /* Horizontal scrollable filter chips */
@@ -106,7 +124,7 @@ h4,
   }
 
   .chip {
-    @apply flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide transition-all duration-200 cursor-pointer;
+    @apply flex-shrink-0 px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wide transition-all duration-200 cursor-pointer;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.08);
     color: rgba(255, 255, 255, 0.5);
@@ -148,123 +166,98 @@ h4,
     /* Top edge sharp highlight */
   }
 
-  .shadow-elite {
-    box-shadow:
-      0 20px 50px -15px rgba(0, 0, 0, 1),
-      inset 0 1px 2px rgba(255, 255, 255, 0.08);
-  }
-
-  .btn-prismatic {
-    @apply relative overflow-hidden transition-all duration-500 border border-white/10 bg-zinc-950 hover:border-primary/60 hover:shadow-glow active:scale-[0.98];
-  }
-
-  .btn-prismatic::after {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent -translate-x-full transition-transform duration-1000;
-  }
-
-  .btn-prismatic:hover::after {
-    @apply translate-x-full;
-  }
-
-
-  /* Status badge pill */
-  .status-pill {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest;
-  }
-
-  .status-pill-upcoming {
-    background: rgba(212, 175, 55, 0.15);
-    color: #D4AF37;
-    border: 1px solid rgba(212, 175, 55, 0.3);
-  }
-
-  .status-pill-ongoing {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-  }
-
-  .status-pill-past {
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  /* Stat card for profile / dashboards */
-  .stat-card {
-    @apply app-card flex flex-col items-center justify-center py-6 px-4 text-center;
-  }
-
-  .stat-card-value {
-    @apply text-2xl font-black text-white;
-  }
-
-  .stat-card-label {
-    @apply text-[10px] font-bold uppercase tracking-widest text-white/40 mt-1;
-  }
-
-  /* Section title */
-  .section-title {
-    @apply text-base font-black text-white uppercase tracking-widest mb-3 flex items-center justify-between;
-  }
-
-  .section-link {
-    @apply text-[10px] font-bold uppercase tracking-widest text-primary/70 hover:text-primary transition-colors;
-  }
-
-
-  /* Standardized Responsive Padding for Sections */
-  .section-padding {
-    @apply py-16 md:py-24 lg:py-32;
-  }
-
-  .responsive-header-padding {
-    @apply pt-20 lg:pt-6;
-  }
-
-  /* Scrollbar Hide Utility */
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .glass-navbar {
-    background: rgba(12, 12, 14, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(212, 175, 55, 0.1);
-  }
-
-  .luxury-card {
-    background: var(--surface);
-    border: 1px solid rgba(212, 175, 55, 0.1);
-    border-radius: var(--radius-lg);
-    @apply transition-all duration-500 hover:border-primary/40;
-    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
-  }
-
   .btn-luxury {
-    @apply relative inline-flex items-center justify-center px-10 py-4 text-sm font-semibold tracking-[0.2em] uppercase transition-all duration-300 overflow-hidden;
-    background: transparent;
-    border: 1px solid var(--primary);
-    color: var(--primary);
-    border-radius: 4px;
-    /* Luxury buttons often have sharper or very subtle radius */
+    @apply relative inline-flex items-center justify-center px-8 py-4 text-[10px] sm:text-[11px] font-black tracking-[0.2em] sm:tracking-[0.4em] uppercase transition-all duration-300 overflow-hidden min-h-[52px] md:min-h-[56px] rounded-full;
+    background: linear-gradient(135deg, #D4AF37 0%, #F1D27A 50%, #D4AF37 100%);
+    color: #0c0c0e;
+    box-shadow: 0 10px 30px -10px rgba(212, 175, 55, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border: none;
+  }
+
+  .btn-icon-luxury {
+    @apply relative inline-flex items-center justify-center w-12 h-12 text-white transition-all duration-300 overflow-hidden rounded-2xl;
+    background: linear-gradient(135deg, #D4AF37 0%, #F1D27A 50%, #D4AF37 100%);
+    color: #0c0c0e;
+    box-shadow: 0 10px 30px -10px rgba(212, 175, 55, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border: none;
   }
 
   .btn-luxury:hover {
-    background: var(--primary);
-    color: var(--background);
-    box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+    @apply scale-[1.02];
+    box-shadow: 0 15px 40px -5px rgba(212, 175, 55, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  .btn-luxury:active {
+    @apply scale-[0.98];
+  }
+
+  .btn-ghost-luxury {
+    @apply relative inline-flex items-center justify-center px-8 py-4 text-[10px] sm:text-[11px] font-black tracking-[0.2em] sm:tracking-[0.4em] uppercase transition-all duration-500 overflow-hidden min-h-[52px] md:min-h-[56px] rounded-full;
+    background: rgba(12, 12, 14, 0.6);
+    border: 1px solid rgba(241, 210, 122, 0.3);
+    color: #F1D27A;
+    backdrop-filter: blur(10px);
+  }
+
+  .btn-icon-ghost-luxury {
+    @apply relative inline-flex items-center justify-center w-12 h-12 transition-all duration-500 overflow-hidden rounded-2xl;
+    background: rgba(12, 12, 14, 0.6);
+    border: 1px solid rgba(241, 210, 122, 0.3);
+    color: #F1D27A;
+    backdrop-filter: blur(10px);
+  }
+
+  .btn-prismatic {
+    @apply relative inline-flex items-center justify-center px-8 py-4 text-[10px] sm:text-[11px] font-black tracking-[0.4em] uppercase transition-all duration-500 overflow-hidden min-h-[52px] md:min-h-[56px] rounded-full;
+    background: #0c0c0e;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    color: #D4AF37;
+  }
+
+  .btn-icon-prismatic {
+    @apply relative inline-flex items-center justify-center w-12 h-12 transition-all duration-500 overflow-hidden rounded-2xl;
+    background: #0c0c0e;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    color: #D4AF37;
+  }
+
+  .btn-prismatic::after,
+  .btn-icon-prismatic::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full transition-transform duration-1000;
+  }
+
+  .btn-prismatic:hover,
+  .btn-icon-prismatic:hover {
+    @apply border-primary/60 bg-white/5;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+  }
+
+  .btn-prismatic:hover::after,
+  .btn-icon-prismatic:hover::after {
+    @apply translate-x-full;
+  }
+
+  .btn-ghost-luxury::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent -translate-x-full transition-transform duration-1000;
+  }
+
+  .btn-ghost-luxury:hover {
+    @apply border-primary/60 text-white;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.15);
+  }
+
+  .btn-ghost-luxury:hover::after {
+    @apply translate-x-full;
+  }
+
+  .btn-ghost-luxury:active {
+    @apply scale-[0.98];
   }
 
   .btn-matte {
-    @apply relative inline-flex items-center justify-center px-10 py-4 text-sm font-semibold tracking-[0.2em] uppercase transition-all duration-300;
+    @apply relative inline-flex items-center justify-center px-10 py-4 text-[11px] font-semibold tracking-[0.2em] uppercase transition-all duration-300;
     background: #000000;
     border: 1px solid rgba(212, 175, 55, 0.3);
     color: #F5F5F5;
@@ -291,7 +284,7 @@ h4,
   }
 
   .input-luxury {
-    @apply w-full bg-surface border border-border rounded-xl px-5 py-4 text-sm focus:outline-none focus:border-primary/60 transition-all duration-300 placeholder:text-muted/50;
+    @apply w-full bg-surface border border-border rounded-xl px-5 py-4 text-[11px] font-bold text-white focus:outline-none focus:border-primary/60 transition-all duration-300 placeholder:text-white/60;
   }
 
   /* VIP Ticket Styles */
@@ -316,7 +309,7 @@ h4,
   }
 
   .text-luxury-sm {
-    @apply text-[8px] sm:text-[10px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-semibold text-muted;
+    @apply text-[9px] sm:text-[11px] uppercase tracking-[0.3em] sm:tracking-[0.4em] font-semibold text-muted;
   }
 
   /* Layout Helpers */
@@ -435,6 +428,25 @@ h4,
   .text-glow-gold {
     text-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
   }
+
+  /* Professional Soft Golden Gradients for Typography */
+  .text-gradient-gold-soft {
+    background: linear-gradient(135deg, #FFFDF7 0%, #F1D27A 40%, #D4AF37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+  }
+
+  .text-gradient-primary {
+    background: linear-gradient(to right, #F1D27A 0%, #D4AF37 50%, #B8860B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+  }
 }
 
 /* Animations */
@@ -478,22 +490,17 @@ h4,
   }
 }
 
-/* Custom Scrollbar */
+/* Hide Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  display: none;
+  width: 0;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--background);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(212, 175, 55, 0.2);
-  @apply transition-colors;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(212, 175, 55, 0.5);
+* {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 /* Selection */

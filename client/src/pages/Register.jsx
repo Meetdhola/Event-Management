@@ -89,9 +89,9 @@ const Register = () => {
                 className="w-full max-w-4xl relative z-10"
             >
                 <div className="text-center mb-12">
-                    <Badge variant="primary" className="mb-6 px-4 py-1.5 uppercase tracking-[0.4em] font-black text-[10px] rounded-full">Secure Registry</Badge>
+                    <Badge variant="primary" className="mb-6 px-4 py-1.5 uppercase tracking-[0.4em] font-black text-[11px] rounded-full">Secure Registry</Badge>
                     <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight leading-none mb-6">
-                        signup <span className="text-primary italic font-serif">MANDATE.</span>
+                        signup <span className="text-gradient-gold-soft italic font-serif">MANDATE.</span>
                     </h1>
 
                     <div className="flex items-center justify-center gap-3 mt-8">
@@ -102,15 +102,15 @@ const Register = () => {
                                     step >= s ? 'bg-primary shadow-[0_0_10px_rgba(212,175,55,0.5)]' : 'bg-white/5'
                                 )} />
                                 <span className={cn(
-                                    "text-[8px] font-black uppercase tracking-widest",
-                                    step === s ? "text-primary" : "text-white/20"
+                                    "text-[9px] font-black uppercase tracking-widest",
+                                    step === s ? "text-primary" : "text-white/80"
                                 )}>Step 0{s}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className="app-card p-10 md:p-14 relative overflow-hidden min-h-[500px] bg-zinc-900/50 backdrop-blur-3xl border border-white/5 shadow-[0_30px_100px_-20px_rgba(0,0,0,0.8)]">
+                <div className="app-card p-10 md:p-14 relative overflow-hidden min-h-[500px] bg-surface/50 backdrop-blur-3xl border border-white/5 shadow-[0_30px_100px_-20px_rgba(0,0,0,0.8)]">
                     <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
                     <AnimatePresence mode="wait">
@@ -123,7 +123,7 @@ const Register = () => {
                                     className="space-y-12"
                                 >
                                     <div className="text-center">
-                                        <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-black mb-10">Classification of Deployment</p>
+                                        <p className="text-[11px] uppercase tracking-[0.4em] text-white/70 font-black mb-10">Classification of Deployment</p>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                         {roles.map((role) => {
@@ -147,8 +147,8 @@ const Register = () => {
                                                         <Icon size={24} />
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-[11px] font-black text-white uppercase tracking-[0.3em] mb-3 group-hover:text-primary transition-colors">{role.label}</h4>
-                                                        <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest leading-relaxed px-2">{role.desc}</p>
+                                                        <h4 className="text-xs font-black text-white uppercase tracking-[0.3em] mb-3 group-hover:text-primary transition-colors">{role.label}</h4>
+                                                        <p className="text-[11px] text-white/90 font-bold uppercase tracking-widest leading-relaxed px-2">{role.desc}</p>
                                                     </div>
                                                 </div>
                                             );
@@ -158,7 +158,7 @@ const Register = () => {
                                         <Button
                                             type="button"
                                             variant="primary"
-                                            className="w-full h-16 text-[11px] font-black uppercase tracking-[0.4em] rounded-2xl"
+                                            className="w-full h-16 text-xs font-black uppercase tracking-[0.4em] rounded-2xl"
                                             onClick={() => formData.role ? setStep(2) : toast.error("Selective mandate required")}
                                         >
                                             Next Protocol
@@ -173,10 +173,10 @@ const Register = () => {
                                     className="space-y-10 max-w-xl mx-auto"
                                 >
                                     <div className="text-center">
-                                        <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-black mb-4">Verification Phase</p>
+                                        <p className="text-[11px] uppercase tracking-[0.4em] text-white/70 font-black mb-4">Verification Phase</p>
                                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
                                             <ShieldCheck size={12} className="text-primary" />
-                                            <p className="text-[9px] text-primary font-black uppercase tracking-widest">Global Auth Active</p>
+                                            <p className="text-[11px] text-primary font-black uppercase tracking-widest">Global Auth Active</p>
                                         </div>
                                     </div>
 
@@ -198,7 +198,7 @@ const Register = () => {
                                                 type="button"
                                                 variant="primary"
                                                 onClick={handleSendOTP}
-                                                className="w-full h-16 text-[11px] font-black uppercase tracking-[0.4em] rounded-2xl"
+                                                className="w-full h-16 text-xs font-black uppercase tracking-[0.4em] rounded-2xl"
                                                 isLoading={loading}
                                             >
                                                 Request Authorization
@@ -220,10 +220,10 @@ const Register = () => {
                                                     className="h-14 rounded-2xl text-center font-mono text-xl tracking-[0.5em]"
                                                 />
                                                 <div className="flex gap-4">
-                                                    <button type="button" onClick={() => { setStep(1); setOtpSent(false); }} className="flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-white border border-white/5 bg-white/[0.02] transition-all">
+                                                    <button type="button" onClick={() => { setStep(1); setOtpSent(false); }} className="flex-1 h-14 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] text-white/90 hover:text-white border border-white/5 bg-white/[0.02] transition-all">
                                                         Revise Role
                                                     </button>
-                                                    <Button type="submit" variant="primary" className="flex-[2] h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.4em]">
+                                                    <Button type="submit" variant="primary" className="flex-[2] h-14 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em]">
                                                         Verify Handshake
                                                     </Button>
                                                 </div>
@@ -239,7 +239,7 @@ const Register = () => {
                                     className="space-y-10 max-w-xl mx-auto"
                                 >
                                     <div className="text-center">
-                                        <p className="text-[10px] uppercase tracking-[0.4em] text-white/40 font-black mb-4">Finalize Registry</p>
+                                        <p className="text-[11px] uppercase tracking-[0.4em] text-white/70 font-black mb-4">Finalize Registry</p>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <Input
@@ -275,10 +275,10 @@ const Register = () => {
                                     />
 
                                     <div className="flex gap-4 pt-4">
-                                        <button type="button" onClick={() => setStep(2)} className="flex-1 h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-white border border-white/5 bg-white/[0.02] transition-all">
+                                        <button type="button" onClick={() => setStep(2)} className="flex-1 h-14 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] text-white/90 hover:text-white border border-white/5 bg-white/[0.02] transition-all">
                                             Return
                                         </button>
-                                        <Button type="submit" variant="prismatic" isLoading={loading} className="flex-[2] h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.5em] shadow-glow">
+                                        <Button type="submit" variant="prismatic" isLoading={loading} className="flex-[2] h-14 rounded-2xl text-[11px] font-black uppercase tracking-[0.5em] shadow-glow">
                                             signup
                                         </Button>
                                     </div>
@@ -289,8 +289,8 @@ const Register = () => {
                 </div>
 
                 <div className="mt-12 text-center pb-12">
-                    <p className="text-[10px] uppercase tracking-[0.4em] text-white/30 font-bold">Already part of the network?</p>
-                    <Link to="/login" className="group inline-flex items-center gap-2 mt-4 text-[10px] uppercase tracking-[0.5em] font-black text-primary hover:text-white transition-all py-2">
+                    <p className="text-[11px] uppercase tracking-[0.4em] text-white/90 font-bold">Already part of the network?</p>
+                    <Link to="/login" className="group inline-flex items-center gap-2 mt-4 text-[11px] uppercase tracking-[0.5em] font-black text-primary hover:text-white transition-all py-2">
                         Sign In to Terminal <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
                     </Link>
                 </div>

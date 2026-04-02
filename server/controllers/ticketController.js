@@ -7,10 +7,10 @@ const crypto = require('crypto');
 // @access  Private/Attendee
 const bookTicket = async (req, res) => {
     try {
-        const { eventId } = req.body;
+        const { eventId, attendees } = req.body;
 
-        if (!eventId) {
-            return res.status(400).json({ message: 'Event ID is required' });
+        if (!eventId || !attendees || !Array.isArray(attendees) || attendees.length === 0) {
+            return res.status(400).json({ message: 'Event ID and attendees list are required' });
         }
 
         const event = await Event.findById(eventId);
@@ -18,27 +18,36 @@ const bookTicket = async (req, res) => {
             return res.status(404).json({ message: 'Event not found' });
         }
 
-        // Check if user already has a ticket
-        const existingTicket = await Ticket.findOne({ event_id: eventId, user_id: req.user.id });
-        if (existingTicket) {
-            return res.status(400).json({ message: 'You already have a ticket for this event' });
-        }
-
         // Check capacity
-        if (event.actual_audience >= event.expected_audience) {
-            return res.status(400).json({ message: 'Event is at full capacity' });
+        if (event.actual_audience + attendees.length > event.expected_audience) {
+            return res.status(400).json({ message: `Insufficient capacity. Only ${event.expected_audience - event.actual_audience} slots remaining.` });
         }
 
-        // Generate a unique QR code hash
+        // Create a single consolidated ticket record
         const qr_code = crypto.randomBytes(16).toString('hex');
-
         const ticket = await Ticket.create({
             event_id: eventId,
             user_id: req.user.id,
-            qr_code
+            qr_code,
+            attendees: attendees.map(person => ({
+                name: person.name,
+                email: person.email,
+                phone: person.phone,
+                is_checked_in: false,
+                checked_in_at: null,
+                checked_in_by: null,
+                gate: null
+            }))
         });
 
-        res.status(201).json(ticket);
+        // Update event audience count
+        event.actual_audience += attendees.length;
+        await event.save();
+
+        res.status(201).json({
+            message: `Successfully secured entry for ${attendees.length} attendee(s)`,
+            ticket
+        });
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
@@ -49,7 +58,13 @@ const bookTicket = async (req, res) => {
 // @access  Private/Attendee
 const getMyTickets = async (req, res) => {
     try {
-        const tickets = await Ticket.find({ user_id: req.user.id })
+        const userEmail = req.user.email;
+        const tickets = await Ticket.find({
+            $or: [
+                { user_id: req.user.id },
+                { "attendees.email": userEmail }
+            ]
+        })
             .populate('event_id', 'event_name venue start_date image');
         res.status(200).json(tickets);
     } catch (error) {

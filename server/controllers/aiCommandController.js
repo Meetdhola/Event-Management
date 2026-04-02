@@ -1,6 +1,39 @@
 const Event = require('../models/Event');
 const Resource = require('../models/Resource');
 
+const analyzeSentiment = async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) return res.status(400).json({ message: 'Text is required' });
+
+        // Heuristic-based sentiment analysis for demo purposes
+        // In production, this would call an LLM or specialized NLP service
+        const positiveWords = ['great', 'awesome', 'excellent', 'good', 'happy', 'love', 'perfect', 'amazing', 'smooth', 'helpful', 'efficient'];
+        const negativeWords = ['bad', 'poor', 'terrible', 'awful', 'sad', 'hate', 'delay', 'expensive', 'rude', 'unhelpful', 'slow', 'broken'];
+
+        const words = text.toLowerCase().split(/\W+/);
+        let score = 0;
+
+        words.forEach(word => {
+            if (positiveWords.includes(word)) score++;
+            if (negativeWords.includes(word)) score--;
+        });
+
+        let sentiment = 'neutral';
+        if (score > 0) sentiment = 'positive';
+        if (score < 0) sentiment = 'negative';
+
+        res.status(200).json({
+            sentiment,
+            score,
+            confidence: 0.85,
+            analysis: `Detected ${sentiment} sentiment based on keyword matching.`
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Sentiment Analysis Error', error: error.message });
+    }
+};
+
 // @desc    Process natural language command for event management
 // @route   POST /api/ai/command
 // @access  Private/Manager
@@ -46,15 +79,18 @@ const processCommand = async (req, res) => {
             }
         } else if (cmd.includes('budget') || cmd.includes('cost') || cmd.includes('expense') || cmd.includes('price')) {
             const total = event.logistics_cart.reduce((sum, item) => sum + ((item.resource?.base_price || 0) * (item.quantity || 0)), 0);
+            const budgetLimit = event.budget || total * 1.2; // Estimation if no budget set
+            const variance = ((total / budgetLimit) * 100).toFixed(1);
+
             response = {
-                message: `Financial Summary: Your estimated logistics expenditure is $${total.toLocaleString()}. You have ${event.logistics_cart.length} items booked so far.`,
+                message: `Financial Intel: Total logistics cost is $${total.toLocaleString()}. This is ${variance}% of your ${event.budget ? 'allocated' : 'estimated'} budget ($${budgetLimit.toLocaleString()}). ${total > budgetLimit ? 'WARNING: Budget overrun detected!' : 'Status: Within financial parameters.'}`,
                 action: 'BUDGET_SUMMARY',
-                data: { total }
+                data: { total, variance, status: total > budgetLimit ? 'OVERRUN' : 'ON_TRACK' }
             };
         } else if (cmd.includes('status') || cmd.includes('ready') || cmd.includes('progress') || cmd.includes('organized')) {
             const hasLogistics = event.logistics_cart.length > 0;
             const hasVolunteers = event.volunteers?.length > 0;
-            const progress = (hasLogistics ? 40 : 0) + (hasVolunteers ? 30 : 0) + 10;
+            const progress = (hasLogistics ? 40 : 0) + (hasVolunteers ? 30 : 0) + (event.status === 'Published' ? 30 : 10);
 
             response = {
                 message: `Readiness Audit: Event is approximately ${progress}% ready. ${!hasLogistics ? 'Logistics are not yet configured.' : 'Logistics are being finalized.'} ${!hasVolunteers ? 'Volunteer recruitment is pending.' : 'Volunteers are assigned.'}`,
@@ -115,5 +151,6 @@ const executeAction = async (req, res) => {
 
 module.exports = {
     processCommand,
-    executeAction
+    executeAction,
+    analyzeSentiment
 };

@@ -1,21 +1,6 @@
 const Message = require('../models/Message');
 const User = require('../models/User');
-
-// Helper to reliably get client and manager IDs from two user IDs
-const getClientAndManagerIds = async (userId1, userId2) => {
-    const users = await User.find({ _id: { $in: [userId1, userId2] } });
-    if (users.length !== 2) return null;
-
-    let clientId = null;
-    let managerId = null;
-
-    for (const user of users) {
-        if (user.role === 'Client') clientId = user._id;
-        if (user.role === 'EventManager') managerId = user._id;
-    }
-
-    return { clientId, managerId };
-};
+const mongoose = require('mongoose');
 
 // @desc    Send a message
 // @route   POST /api/messages
@@ -30,12 +15,15 @@ const sendMessage = async (req, res) => {
 
         const sender_id = req.user.id;
 
-        // Determine who is the client and who is the manager
-        const roles = await getClientAndManagerIds(sender_id, receiver_id);
-
-        if (!roles || !roles.clientId || !roles.managerId) {
-            return res.status(400).json({ message: 'Chat must be between a Client and an Event Manager' });
+        if (!mongoose.Types.ObjectId.isValid(receiver_id)) {
+            return res.status(400).json({ message: 'Invalid receiver ID format' });
         }
+
+        console.log(`SendMessage - Sender: ${sender_id}, Receiver: ${receiver_id}`);
+
+        // Sort IDs to ensure consistent user1_id and user2_id
+        const [user1_id, user2_id] = [sender_id.toString(), receiver_id.toString()].sort();
+        console.log(`Chat ID: ${user1_id} / ${user2_id}`);
 
         const newMessage = {
             sender: sender_id,
@@ -45,8 +33,8 @@ const sendMessage = async (req, res) => {
 
         const conversation = await Message.findOneAndUpdate(
             {
-                client_id: roles.clientId,
-                manager_id: roles.managerId
+                user1_id,
+                user2_id
             },
             { $push: { messages: newMessage } },
             { upsert: true, new: true, setDefaultsOnInsert: true }
@@ -57,7 +45,7 @@ const sendMessage = async (req, res) => {
         res.status(201).json(lastMessage);
     } catch (error) {
         console.error('Error sending message:', error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        res.status(500).json({ message: 'Server Error', error: error.message, stack: error.stack });
     }
 };
 
@@ -67,28 +55,33 @@ const sendMessage = async (req, res) => {
 const getMessages = async (req, res) => {
     try {
         const { receiver_id } = req.params;
-        const sender_id = req.user.id;
+        const sender_id = req.user.id.toString();
+        const receiver_id_str = receiver_id.toString();
 
-        // Determine who is the client and who is the manager
-        const roles = await getClientAndManagerIds(sender_id, receiver_id);
-
-        if (!roles || !roles.clientId || !roles.managerId) {
-            return res.status(400).json({ message: 'Invalid chat configuration (must be Client and Manager)' });
+        if (!mongoose.Types.ObjectId.isValid(receiver_id_str)) {
+            return res.status(400).json({ message: 'Invalid receiver ID format' });
         }
 
+        console.log(`GetMessages - Sender: ${sender_id}, Receiver: ${receiver_id_str}`);
+
+        // Sort IDs to ensure consistent user1_id and user2_id
+        const [user1_id, user2_id] = [sender_id, receiver_id_str].sort();
+        console.log(`Chat Query ID: ${user1_id} / ${user2_id}`);
+
         const conversation = await Message.findOne({
-            client_id: roles.clientId,
-            manager_id: roles.managerId
+            user1_id,
+            user2_id
         }).populate('messages.sender', 'name role');
 
         if (!conversation || !conversation.messages) {
+            console.log('No conversation found, returning empty array');
             return res.status(200).json([]);
         }
 
         res.status(200).json(conversation.messages);
     } catch (error) {
-        console.error('Error getting messages:', error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        console.error('CRITICAL Error getting messages:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message, stack: error.stack });
     }
 };
 

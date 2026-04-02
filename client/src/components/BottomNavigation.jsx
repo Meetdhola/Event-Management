@@ -15,7 +15,7 @@ const BottomNavigation = () => {
     const navItems = [
         { path: '/dashboard', icon: LayoutDashboard, label: 'Home', roles: ['Admin', 'EventManager', 'Vendor', 'Volunteer', 'Attendee', 'Client'] },
         { path: '/admin', icon: ShieldCheck, label: 'System', roles: ['Admin'] },
-        { path: '/create-event', icon: PlusCircle, label: 'Create', roles: ['Admin', 'EventManager', 'Attendee'] },
+        { path: '/create-event', icon: PlusCircle, label: 'Create', roles: ['Admin', 'EventManager'] },
         { path: '/chat', icon: MessageSquare, label: 'Chat', roles: ['Admin', 'Client', 'EventManager'] },
         { path: '/profile', icon: User, label: 'Profile', roles: ['Admin', 'EventManager', 'Vendor', 'Volunteer', 'Attendee', 'Client'] }
     ].filter(item => item.roles.includes(user.role));

@@ -20,6 +20,14 @@ const updateService = async (req, res) => {
     try {
         const { name, category, base_price, unit, capacity_per_unit, description, is_available, resourceId } = req.body;
 
+        let sanitizedName = name ? name.trim().replace(/\s+/g, ' ') : '';
+        if (!sanitizedName) {
+            return res.status(400).json({ message: 'Resource designation cannot be empty.' });
+        }
+        let strippedName = sanitizedName.replace(/\s+/g, '').toLowerCase();
+
+        const vendorServices = await Resource.find({ vendor_id: req.user.id });
+
         let service;
         if (resourceId) {
             service = await Resource.findById(resourceId);
@@ -27,11 +35,23 @@ const updateService = async (req, res) => {
                 return res.status(401).json({ message: 'Not authorized' });
             }
 
-            Object.assign(service, { name, category, base_price, unit, capacity_per_unit, description, is_available });
+            if (service.name.replace(/\s+/g, '').toLowerCase() !== strippedName) {
+                const existing = vendorServices.find(s => s.name.replace(/\s+/g, '').toLowerCase() === strippedName);
+                if (existing) {
+                    return res.status(400).json({ message: 'You already have a resource with this or a very similar designation.' });
+                }
+            }
+
+            Object.assign(service, { name: sanitizedName, category, base_price, unit, capacity_per_unit, description, is_available });
             await service.save();
         } else {
+            const existing = vendorServices.find(s => s.name.replace(/\s+/g, '').toLowerCase() === strippedName);
+            if (existing) {
+                return res.status(400).json({ message: 'You already have a resource with this or a very similar designation.' });
+            }
+
             service = await Resource.create({
-                name, category, base_price, unit, capacity_per_unit, description, is_available,
+                name: sanitizedName, category, base_price, unit, capacity_per_unit, description, is_available,
                 vendor_id: req.user.id
             });
         }

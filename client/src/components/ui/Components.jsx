@@ -6,6 +6,7 @@ export const Button = ({ className, children, isLoading, variant = 'luxury', ...
         luxury: 'btn-luxury', // Champagne Gold Border
         prismatic: 'btn-prismatic text-primary', // High-contrast Edge + Shimmer
         matte: 'btn-matte',   // Matte Black/Gold for Mobile
+        'ghost-luxury': 'btn-ghost-luxury', // Obsidian + Gold Border
         ghost: 'bg-transparent hover:bg-white/5 border border-transparent hover:border-primary/20 text-copy',
         danger: 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20'
     };
@@ -45,12 +46,12 @@ export const Button = ({ className, children, isLoading, variant = 'luxury', ...
     );
 };
 
-export const Input = ({ label, className, error, id, icon: Icon, ...props }) => {
+export const Input = ({ label, className, error, id, icon: Icon, required, ...props }) => {
     return (
         <div className="space-y-2 w-full group">
             {label && (
-                <label htmlFor={id} className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted ml-1 group-focus-within:text-primary transition-colors">
-                    {label}
+                <label htmlFor={id} className="text-[11px] uppercase tracking-[0.3em] font-bold text-muted ml-1 group-focus-within:text-gradient-primary transition-all duration-300">
+                    {label}{required && <span className="text-red-500 ml-1 text-xs leading-none">*</span>}
                 </label>
             )}
             <div className="relative">
@@ -61,6 +62,7 @@ export const Input = ({ label, className, error, id, icon: Icon, ...props }) => 
                 )}
                 <input
                     id={id}
+                    required={required}
                     className={cn(
                         "input-luxury",
                         Icon && "pl-12",
@@ -70,7 +72,7 @@ export const Input = ({ label, className, error, id, icon: Icon, ...props }) => 
                     {...props}
                 />
             </div>
-            {error && <p className="text-[10px] uppercase tracking-wider text-red-500 ml-1 font-bold">{error}</p>}
+            {error && <p className="text-[11px] uppercase tracking-wider text-red-500 ml-1 font-bold">{error}</p>}
         </div>
     );
 };
@@ -101,7 +103,7 @@ export const Badge = ({ children, variant = 'default', className }) => {
 
     return (
         <span className={cn(
-            "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] border transition-all h-fit inline-flex items-center",
+            "px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.25em] border transition-all h-fit inline-flex items-center",
             variants[variant],
             className
         )}>

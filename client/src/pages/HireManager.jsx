@@ -75,26 +75,39 @@ const HireManager = () => {
         m.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (loading) return (
-        <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-background">
-            <div className="relative">
-                <div className="h-20 w-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin shadow-[0_0_20px_rgba(var(--glow-primary),0.5)]" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="h-10 w-10 rounded-full bg-primary/20 blur-xl animate-pulse" />
+    if (loading) {
+        return (
+            <div className="min-h-[calc(100vh-80px)] bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
+                {/* Background Orbs */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
+
+                <div className="relative z-10 flex flex-col items-center gap-8">
+                    <div className="relative">
+                        <div className="h-20 w-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin shadow-[0_0_40px_rgba(212,175,55,0.2)]" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full bg-primary/20 blur-xl animate-pulse" />
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-2">
+                        <span className="text-[11px] font-black text-white/70 uppercase tracking-[0.5em] animate-pulse">Initializing System</span>
+                        <div className="h-[1px] w-32 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    }
 
     return (
-        <div className="main-content px-3 pb-28 sm:pb-4">
+        <div className="main-content px-3 pb-32 sm:pb-4">
             <div className="max-w-2xl mx-auto space-y-8">
 
                 {/* Command Header */}
                 <div className="flex items-center justify-between px-1">
                     <div>
-                        <h1 className="text-2xl font-black text-white leading-tight uppercase tracking-widest italic font-serif">Hire Manager <span className="text-primary not-italic">🤝</span></h1>
-                        <p className="text-[10px] text-white/40 mt-1 uppercase tracking-[0.4em] font-black">Choose an event manager for your next event • Secure Access</p>
+                        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
+                            hire <span className="text-gradient-gold-soft italic font-serif">MANAGER.</span>
+                        </h1>
+                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Choose an event manager for your next event • Secure Access</p>
                     </div>
                 </div>
 
@@ -102,22 +115,22 @@ const HireManager = () => {
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
                         {/* Intelligence Flow */}
                         <div className="relative group">
-                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-primary transition-colors" size={16} />
+                            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/80 group-focus-within:text-primary transition-colors" size={16} />
                             <input
                                 type="text"
                                 placeholder="Search managers..."
-                                className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-14 pr-6 text-[11px] font-black uppercase tracking-widest text-white placeholder:text-white/10 focus:outline-none focus:border-primary/20 transition-all font-mono"
+                                className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-14 pr-6 text-xs font-black uppercase tracking-widest text-white placeholder:text-white/80 focus:outline-none focus:border-primary/20 transition-all font-mono"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
 
                         <div className="space-y-4">
-                            <h2 className="text-[10px] font-black text-white/30 px-1 uppercase tracking-[0.4em]">Available Managers</h2>
+                            <h2 className="text-[11px] font-black text-white/90 px-1 uppercase tracking-[0.4em]">Available Managers</h2>
                             {filteredManagers.length === 0 ? (
-                                <div className="py-24 flex flex-col items-center justify-center app-card bg-zinc-900/40 border-dashed opacity-10">
+                                <div className="py-24 flex flex-col items-center justify-center app-card bg-surface/40 border-dashed opacity-10">
                                     <Crosshair size={48} className="text-white mb-4" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.5em]">No managers found</p>
+                                    <p className="text-[11px] font-black uppercase tracking-[0.5em]">No managers found</p>
                                 </div>
                             ) : (
                                 filteredManagers.map((manager, index) => (
@@ -133,16 +146,17 @@ const HireManager = () => {
                                                 {manager.name.charAt(0)}
                                             </div>
                                             <div>
-                                                <h3 className="text-sm font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors">{manager.name}</h3>
-                                                <p className="text-[9px] text-white/20 font-black uppercase tracking-[0.3em] mt-1.5">{manager.email}</p>
+                                                <h3 className="text-[11px] font-black text-white uppercase tracking-tight group-hover:text-primary transition-colors">{manager.name}</h3>
+                                                <p className="text-[11px] text-white/80 font-black uppercase tracking-[0.3em] mt-1.5">{manager.email}</p>
                                             </div>
                                         </div>
-                                        <button
+                                        <Button
                                             onClick={() => setSelectedManager(manager)}
-                                            className="w-11 h-11 rounded-xl bg-white/5 border border-white/5 text-white/20 group-hover:text-primary group-hover:border-primary/20 transition-all flex items-center justify-center"
+                                            variant="ghost-luxury"
+                                            className="btn-icon-ghost-luxury p-0"
                                         >
                                             <ChevronRight size={20} className="group-hover:translate-x-0.5 transition-transform" />
-                                        </button>
+                                        </Button>
                                     </motion.div>
                                 ))
                             )}
@@ -155,17 +169,18 @@ const HireManager = () => {
                         className="space-y-10"
                     >
                         <div className="flex items-center gap-6">
-                            <button
+                            <Button
                                 onClick={() => setSelectedManager(null)}
-                                className="w-14 h-14 rounded-2xl bg-white/5 border border-white/5 text-white/40 hover:text-rose-500 hover:border-rose-500/20 transition-all flex items-center justify-center"
+                                variant="ghost-luxury"
+                                className="w-14 h-14 rounded-2xl p-0 flex items-center justify-center hover:text-rose-500 hover:border-rose-500/20"
                             >
                                 <ArrowLeft size={18} />
-                            </button>
+                            </Button>
                             <div>
                                 <h2 className="text-2xl font-serif text-white tracking-widest uppercase italic leading-none">
                                     Hiring <span className="text-primary not-italic">Request</span>
                                 </h2>
-                                <p className="text-[9px] text-white/20 font-black uppercase tracking-[0.4em] mt-3">Manager: {selectedManager.name}</p>
+                                <p className="text-[11px] text-white/80 font-black uppercase tracking-[0.4em] mt-3">Manager: {selectedManager.name}</p>
                             </div>
                         </div>
 
@@ -180,7 +195,7 @@ const HireManager = () => {
                                         value={formData.event_name}
                                         onChange={(e) => setFormData({ ...formData, event_name: e.target.value })}
                                     />
-                                    <div className="grid grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <Input
                                             label="Event Type"
                                             placeholder="Gala, Music, etc."
@@ -199,9 +214,9 @@ const HireManager = () => {
                                     </div>
 
                                     <div className="space-y-1.5 px-1">
-                                        <label className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] px-2 italic">Operation Briefing</label>
+                                        <label className="text-[11px] font-black text-white/80 uppercase tracking-[0.4em] px-2 italic">Operation Briefing</label>
                                         <textarea
-                                            className="w-full bg-white/[0.02] border border-white/5 rounded-2xl p-6 text-white text-[12px] focus:outline-none focus:border-primary/40 transition-all min-h-[140px] font-medium leading-relaxed placeholder:text-white/10"
+                                            className="w-full bg-white/[0.02] border border-white/5 rounded-2xl p-6 text-white text-xs focus:outline-none focus:border-primary/40 transition-all min-h-[140px] font-medium leading-relaxed placeholder:text-white/80"
                                             placeholder="Describe what you need for this event..."
                                             required
                                             value={formData.description}
@@ -216,7 +231,7 @@ const HireManager = () => {
                                         value={formData.venue}
                                         onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
                                     />
-                                    <div className="grid grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <Input
                                             type="date"
                                             label="Start Date"
@@ -235,19 +250,21 @@ const HireManager = () => {
                                 </div>
 
                                 <div className="flex gap-6 pt-6">
-                                    <button
+                                    <Button
                                         type="button"
-                                        className="flex-1 h-16 rounded-2xl bg-white/5 text-white/20 border border-white/5 font-black uppercase text-[10px] tracking-widest hover:text-white transition-all"
+                                        variant="ghost-luxury"
+                                        className="flex-1 h-16 rounded-2xl text-[11px] font-black uppercase tracking-widest"
                                         onClick={() => setSelectedManager(null)}
                                     >
                                         Cancel
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         type="submit"
-                                        className="flex-[2] h-16 rounded-2xl bg-primary text-background font-black uppercase text-[11px] tracking-[0.4em] shadow-[0_0_40px_rgba(212,175,55,0.2)] hover:scale-[1.02] transition-all italic"
+                                        variant="luxury"
+                                        className="flex-[2] h-16 rounded-2xl text-xs font-black uppercase tracking-[0.4em] italic shadow-glow"
                                     >
                                         Send Request
-                                    </button>
+                                    </Button>
                                 </div>
                             </form>
                         </div>

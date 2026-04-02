@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { Button, Badge } from './ui/Components';
 
 const ServiceManager = () => {
     const [services, setServices] = useState([]);
@@ -87,154 +88,173 @@ const ServiceManager = () => {
     if (loading) return null;
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-10">
             {/* Grid of Services */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {services.map((res) => (
                     <motion.div
                         key={res._id}
                         layout
-                        className="glass-panel group p-6 rounded-[32px] border border-white/10 bg-white/5 hover:bg-white/10 transition-all"
+                        className="app-card group p-8 relative overflow-hidden bg-zinc-900/40 backdrop-blur-3xl border-white/5 hover:border-primary/20 transition-all duration-500"
                     >
-                        <div className="flex justify-between items-start mb-4">
-                            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/20">
+                        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                        <div className="flex justify-between items-start mb-6">
+                            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-black uppercase tracking-[0.2em] border border-primary/20 shadow-glow">
                                 {res.category}
                             </span>
-                            <div className="flex gap-2">
-                                <button onClick={() => handleEdit(res)} className="p-2 rounded-xl bg-white/5 hover:bg-white/20 text-gray-400 transition-all">
+                            <div className="flex gap-3">
+                                <button onClick={() => handleEdit(res)} className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 hover:border-primary/20 text-white/80 hover:text-primary transition-all">
                                     <Edit2 size={14} />
                                 </button>
-                                <button onClick={() => handleDelete(res._id)} className="p-2 rounded-xl bg-red-500/5 hover:bg-red-500/20 text-red-500 transition-all opacity-0 group-hover:opacity-100">
+                                <button onClick={() => handleDelete(res._id)} className="p-2.5 rounded-xl bg-rose-500/5 border border-rose-500/10 hover:border-rose-500/30 text-rose-500/20 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100">
                                     <Trash2 size={14} />
                                 </button>
                             </div>
                         </div>
-                        <h4 className="text-xl font-bold text-white mb-2">{res.name}</h4>
-                        <p className="text-xs text-gray-500 mb-6 line-clamp-2">{res.description}</p>
+                        <h4 className="text-lg font-black text-white mb-3 uppercase tracking-tight group-hover:text-primary transition-colors">{res.name}</h4>
+                        <p className="text-xs text-white/70 font-medium mb-8 line-clamp-2 leading-relaxed">{res.description}</p>
 
-                        <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                        <div className="flex items-center justify-between pt-6 border-t border-white/5 bg-black/20 -mx-8 px-8 -mb-8 pb-8">
                             <div>
-                                <span className="text-2xl font-black text-white">₹{res.base_price}</span>
-                                <span className="text-[10px] text-gray-500 uppercase font-bold ml-2 tracking-widest">{res.unit}</span>
+                                <span className="text-2xl font-black text-white italic font-serif tracking-tighter">₹{res.base_price}</span>
+                                <span className="text-[11px] text-white/80 font-black uppercase ml-2 tracking-widest">{res.unit}</span>
                             </div>
-                            <div className={`w-3 h-3 rounded-full ${res.is_available ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-gray-600'}`} />
+                            <div className="flex flex-col items-end gap-1.5">
+                                <div className={`w-2.5 h-2.5 rounded-full ${res.is_available ? 'bg-emerald-500 shadow-glow animate-pulse' : 'bg-white/10'}`} />
+                                <span className="text-[11px] font-black text-white/80 uppercase tracking-widest">{res.is_available ? 'Active' : 'Inactive'}</span>
+                            </div>
                         </div>
                     </motion.div>
                 ))}
 
-                {/* Blank Add Card */}
+                {/* Tactical Add Card */}
                 {!isAdding && (
                     <button
                         onClick={() => setIsAdding(true)}
-                        className="h-full min-h-[220px] rounded-[32px] border border-dashed border-white/10 bg-white/5 hover:bg-white/10 transition-all flex flex-col items-center justify-center gap-4 group"
+                        className="h-full min-h-[260px] rounded-[2.5rem] border-2 border-dashed border-white/5 bg-white/[0.02] hover:bg-white/[0.04] hover:border-primary/20 transition-all duration-500 flex flex-col items-center justify-center gap-6 group relative overflow-hidden"
                     >
-                        <div className="p-4 rounded-full bg-white/5 group-hover:bg-primary/20 group-hover:text-primary transition-all">
-                            <Plus size={32} />
+                        <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="p-5 rounded-2xl bg-white/5 group-hover:bg-primary/20 group-hover:text-primary transition-all shadow-xl relative z-10">
+                            <Plus size={36} strokeWidth={1.5} />
                         </div>
-                        <span className="text-sm font-bold text-gray-500">Add New Resource</span>
+                        <div className="text-center relative z-10">
+                            <span className="block text-xs font-black text-white/70 uppercase tracking-[0.4em] group-hover:text-white transition-colors">Authorize New Resource</span>
+                            <span className="text-[9px] text-white/70 font-bold uppercase tracking-widest mt-2 block">Tactical Deployment System</span>
+                        </div>
                     </button>
                 )}
             </div>
 
-            {/* Modal/Form Overlay */}
+            {/* Tactical Configuration Portal */}
             <AnimatePresence>
                 {isAdding && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                        className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0C0C0E]/95 backdrop-blur-xl p-4 sm:p-6"
                     >
+                        {/* Background Orbs */}
+                        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px]" />
+                        <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px]" />
+
                         <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
+                            initial={{ scale: 0.95, y: 20 }}
                             animate={{ scale: 1, y: 0 }}
-                            className="w-full max-w-2xl glass-panel p-10 rounded-[48px] border border-white/10 bg-[#0a0a0b]"
+                            className="w-full max-w-2xl app-card p-10 md:p-12 rounded-[3.5rem] border-white/10 bg-zinc-950 shadow-2xl relative overflow-hidden"
                         >
-                            <div className="flex justify-between items-start mb-10">
+                            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+
+                            <div className="flex justify-between items-start mb-12">
                                 <div>
-                                    <h2 className="text-3xl font-black text-white tracking-tighter">
-                                        {editingService ? 'Optimize Service' : 'Publish Resource'}
+                                    <Badge variant="primary" className="mb-4 px-3 py-1 uppercase tracking-widest font-black text-[11px]">Resource Protocol</Badge>
+                                    <h2 className="text-3xl font-black text-white tracking-widest uppercase italic font-serif">
+                                        {editingService ? 'Optimize' : 'Publish'} <span className="text-primary not-italic">Entity</span>
                                     </h2>
-                                    <p className="text-gray-500 text-sm mt-1">Configure your tactical event services.</p>
+                                    <p className="text-white/80 text-[11px] font-black uppercase tracking-[0.4em] mt-3 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                        Tactical configuration mode active
+                                    </p>
                                 </div>
                                 <button
                                     onClick={() => { setIsAdding(false); setEditingService(null); }}
-                                    className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-400 transition-all"
+                                    className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-rose-500/20 hover:text-rose-500 text-white/80 transition-all group"
                                 >
-                                    <X size={20} />
+                                    <X size={20} className="group-hover:rotate-90 transition-transform duration-500" />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <form onSubmit={handleSubmit} className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Service Name</label>
+                                        <label className="text-[11px] font-black text-white/80 uppercase tracking-[0.4em] ml-1 italic">Identification</label>
                                         <div className="relative group">
-                                            <Package className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                                            <Package className="absolute left-5 top-1/2 -translate-y-1/2 text-white/70 group-focus-within:text-primary transition-colors" size={18} />
                                             <input
                                                 required
                                                 type="text"
                                                 value={formData.name}
                                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
-                                                placeholder="Elite Sound System..."
+                                                className="w-full bg-white/[0.02] border border-white/5 rounded-2xl py-5 pl-14 pr-6 text-white text-[9px] font-bold placeholder:text-white/80 focus:outline-none focus:border-primary/30 transition-all font-mono"
+                                                placeholder="ELITE_SYSTEM_NAME"
                                             />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Category</label>
+                                        <label className="text-[11px] font-black text-white/80 uppercase tracking-[0.4em] ml-1 italic">Classification</label>
                                         <div className="relative group">
-                                            <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                                            <Layers className="absolute left-5 top-1/2 -translate-y-1/2 text-white/70 group-focus-within:text-primary transition-colors" size={18} />
                                             <select
                                                 value={formData.category}
                                                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all appearance-none"
+                                                className="w-full bg-white/[0.02] border border-white/5 rounded-2xl py-5 pl-14 pr-6 text-white text-[9px] font-bold focus:outline-none focus:border-primary/30 transition-all appearance-none cursor-pointer"
                                             >
                                                 {['Security', 'Food', 'Audio/Visual', 'Logistics', 'Decor', 'Technical'].map(cat => (
-                                                    <option key={cat} value={cat} className="bg-[#1a1a1c]">{cat}</option>
+                                                    <option key={cat} value={cat} className="bg-zinc-950">{cat}</option>
                                                 ))}
                                             </select>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Base Price</label>
+                                        <label className="text-[11px] font-black text-white/80 uppercase tracking-[0.4em] ml-1 italic">Value Baseline</label>
                                         <div className="relative group">
-                                            <IndianRupee className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                                            <IndianRupee className="absolute left-5 top-1/2 -translate-y-1/2 text-white/70 group-focus-within:text-primary transition-colors" size={16} />
                                             <input
                                                 required
                                                 type="number"
                                                 value={formData.base_price}
                                                 onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
+                                                className="w-full bg-white/[0.02] border border-white/5 rounded-2xl py-5 pl-14 pr-6 text-white text-[9px] font-bold focus:outline-none focus:border-primary/30 transition-all font-mono"
                                                 placeholder="0.00"
                                             />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Pricing Unit</label>
+                                        <label className="text-[11px] font-black text-white/80 uppercase tracking-[0.4em] ml-1 italic">Unit Metric</label>
                                         <div className="relative group">
-                                            <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                                            <Tag className="absolute left-5 top-1/2 -translate-y-1/2 text-white/70 group-focus-within:text-primary transition-colors" size={16} />
                                             <input
                                                 type="text"
                                                 value={formData.unit}
                                                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
-                                                placeholder="per guard"
+                                                className="w-full bg-white/[0.02] border border-white/5 rounded-2xl py-5 pl-14 pr-6 text-white text-[9px] font-bold focus:outline-none focus:border-primary/30 transition-all font-mono"
+                                                placeholder="PER_UNIT"
                                             />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Capacity/U</label>
+                                        <label className="text-[11px] font-black text-white/80 uppercase tracking-[0.4em] ml-1 italic">Capacity Index</label>
                                         <div className="relative group">
-                                            <Info className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-primary transition-colors" size={18} />
+                                            <Info className="absolute left-5 top-1/2 -translate-y-1/2 text-white/70 group-focus-within:text-primary transition-colors" size={16} />
                                             <input
                                                 type="number"
                                                 value={formData.capacity_per_unit}
                                                 onChange={(e) => setFormData({ ...formData, capacity_per_unit: e.target.value })}
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
+                                                className="w-full bg-white/[0.02] border border-white/5 rounded-2xl py-5 pl-14 pr-6 text-white text-[9px] font-bold focus:outline-none focus:border-primary/30 transition-all font-mono"
                                                 placeholder="250"
                                             />
                                         </div>
@@ -242,36 +262,37 @@ const ServiceManager = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Description</label>
+                                    <label className="text-[11px] font-black text-white/80 uppercase tracking-[0.4em] ml-1 italic">Operational Briefing</label>
                                     <textarea
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        rows="3"
-                                        className="w-full bg-white/5 border border-white/10 rounded-[32px] p-6 text-white placeholder-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all resize-none"
-                                        placeholder="Detailed capabilities and terms..."
+                                        rows="4"
+                                        className="w-full bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 text-white text-[9px] font-medium placeholder:text-white/80 focus:outline-none focus:border-primary/30 transition-all resize-none leading-relaxed"
+                                        placeholder="Enter detailed resource capabilities and mission parameters..."
                                     />
                                 </div>
 
-                                <div className="flex items-center gap-4 py-4">
+                                <div className="flex items-center gap-6 py-2">
                                     <button
                                         type="button"
                                         onClick={() => setFormData({ ...formData, is_available: !formData.is_available })}
-                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${formData.is_available
-                                            ? 'bg-green-500/10 border-green-500/30 text-green-500'
-                                            : 'bg-white/5 border-white/10 text-gray-500'
+                                        className={`flex items-center gap-3 px-6 py-3 rounded-2xl border transition-all duration-500 ${formData.is_available
+                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 shadow-glow'
+                                            : 'bg-white/5 border-white/10 text-white/60'
                                             }`}
                                     >
-                                        {formData.is_available ? <Check size={16} /> : <X size={16} />}
-                                        <span className="text-xs font-bold uppercase tracking-widest">Available for Booking</span>
+                                        <div className={`w-2 h-2 rounded-full ${formData.is_available ? 'bg-emerald-500 shadow-glow animate-pulse' : 'bg-white/20'}`} />
+                                        <span className="text-[11px] font-black uppercase tracking-widest">{formData.is_available ? 'Operational' : 'Off-Line'}</span>
                                     </button>
                                 </div>
 
-                                <button
+                                <Button
                                     type="submit"
-                                    className="w-full !bg-white py-5 rounded-[32px] !text-slate-950 font-black text-lg shadow-xl shadow-white/5 hover:scale-[1.01] transition-all active:scale-95"
+                                    variant="luxury"
+                                    className="w-full h-16 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.5em] mt-4 italic"
                                 >
-                                    {editingService ? 'Sync Optimization' : 'Authorize Release'}
-                                </button>
+                                    {editingService ? 'Sync Optimization' : 'Authorize Deployment'}
+                                </Button>
                             </form>
                         </motion.div>
                     </motion.div>

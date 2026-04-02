@@ -47,6 +47,10 @@ const userSchema = new mongoose.Schema({
     created_at: {
         type: Date,
         default: Date.now
+    },
+    push_subscription: {
+        type: Object,
+        default: null
     }
 });
 

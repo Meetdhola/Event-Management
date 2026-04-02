@@ -12,6 +12,7 @@ import AttendeeDashboard from './pages/AttendeeDashboard';
 import ClientDashboard from './pages/ClientDashboard';
 import HireManager from './pages/HireManager';
 import Chat from './pages/Chat';
+import AICommandCenter from './components/AICommandCenter';
 import RejectedEvents from './pages/RejectedEvents';
 import Profile from './pages/Profile';
 import Sidebar from './components/Sidebar';
@@ -42,8 +43,22 @@ const AppLayout = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {/* Background Orbs */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
+
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          <div className="relative">
+            <div className="h-20 w-20 rounded-full border-4 border-primary/20 border-t-primary animate-spin shadow-[0_0_40px_rgba(212,175,55,0.2)]" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-primary/20 blur-xl animate-pulse" />
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-[11px] font-black text-white/70 uppercase tracking-[0.5em] animate-pulse">Initializing System</span>
+            <div className="h-[1px] w-32 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -72,25 +87,26 @@ const AppLayout = () => {
   return (
     <div className="flex min-h-screen bg-background text-foreground relative overflow-hidden">
       {/* Sidebar handles Desktop Navigation */}
-      <div className="hidden lg:block w-64 shrink-0">
+      <div className="hidden lg:block w-72 shrink-0">
         <Sidebar isOpen={true} onClose={() => { }} />
       </div>
 
       <main className="flex-1 w-full min-w-0 transition-all duration-300 main-content">
         <Navbar />
         <MobileHeader />
-        <div className="px-4 sm:px-6 lg:px-8 pt-20 lg:pt-6 w-full overflow-x-hidden min-h-[calc(100vh-80px)]">
+        <div className="px-4 sm:px-6 lg:px-8 pt-20 lg:pt-32 w-full overflow-x-hidden min-h-[calc(100vh-80px)]">
           <Routes>
             <Route path="/dashboard" element={<ProtectedRoute><DashboardWrapper /></ProtectedRoute>} />
-            <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin/:section" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/vendor" element={<ProtectedRoute><VendorDashboard /></ProtectedRoute>} />
-            <Route path="/volunteer" element={<ProtectedRoute><VolunteerDashboard /></ProtectedRoute>} />
+            <Route path="/create-event" element={<ProtectedRoute allowedRoles={['EventManager', 'Admin']}><CreateEvent /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/:section" element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/vendor" element={<ProtectedRoute allowedRoles={['Vendor', 'Admin']}><VendorDashboard /></ProtectedRoute>} />
+            <Route path="/volunteer" element={<ProtectedRoute allowedRoles={['Volunteer', 'Admin']}><VolunteerDashboard /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/hire-manager" element={<ProtectedRoute><HireManager /></ProtectedRoute>} />
+            <Route path="/hire-manager" element={<ProtectedRoute allowedRoles={['Client', 'Admin']}><HireManager /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-            <Route path="/rejected-events" element={<ProtectedRoute><RejectedEvents /></ProtectedRoute>} />
+            <Route path="/ai-center" element={<ProtectedRoute allowedRoles={['EventManager', 'Admin']}><AICommandCenter /></ProtectedRoute>} />
+            <Route path="/rejected-events" element={<ProtectedRoute allowedRoles={['EventManager', 'Admin']}><RejectedEvents /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </div>

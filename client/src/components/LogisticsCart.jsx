@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { Button } from './ui/Components';
 
 const LogisticsCart = ({ eventId, onUpdate }) => {
     const [resources, setResources] = useState([]);
@@ -69,91 +70,127 @@ const LogisticsCart = ({ eventId, onUpdate }) => {
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Resource Catalog */}
-            <div className="lg:col-span-2 space-y-6">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                        <Zap className="text-yellow-400" size={20} />
-                        Smart Resource Catalog
-                    </h3>
-                </div>
+        <div className="w-full relative">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 w-full">
+                {/* Resource Catalog */}
+                <div className="xl:col-span-2 space-y-8 w-full">
+                    <div className="flex items-center gap-3 px-1">
+                        <div className="h-6 w-1 bg-primary rounded-full shadow-glow" />
+                        <h3 className="text-xl font-serif italic font-black text-white uppercase tracking-widest pl-1 leading-none">Smart Resource Catalog</h3>
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {resources.map((res) => (
-                        <motion.div
-                            key={res._id}
-                            whileHover={{ scale: 1.02 }}
-                            className="glass-panel p-5 rounded-2xl border border-white/5 bg-white/5"
-                        >
-                            <div className="flex justify-between items-start mb-3">
-                                <div>
-                                    <span className="text-[10px] uppercase tracking-widest font-bold text-gray-500">{res.category}</span>
-                                    <h4 className="text-white font-bold mt-1">{res.name}</h4>
-                                </div>
-                                <span className="text-primary font-bold">₹{res.base_price}/unit</span>
-                            </div>
-                            <p className="text-xs text-gray-400 mb-4 line-clamp-2">{res.description}</p>
-                            <button
-                                onClick={() => handleAddToCart(res._id)}
-                                className="w-full py-2 rounded-xl bg-primary/20 text-primary text-xs font-bold hover:bg-primary/30 transition-all flex items-center justify-center gap-2"
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {resources.map((res) => (
+                            <motion.div
+                                key={res._id}
+                                whileHover={{ y: -5 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                                className="app-card p-8 group hover:border-primary/40 hover:shadow-elite transition-all duration-700 bg-zinc-950/80 backdrop-blur-2xl flex flex-col justify-between h-full"
                             >
-                                <Plus size={14} /> Add to Cart
-                            </button>
-                        </motion.div>
-                    ))}
+                                <div>
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-primary/40 group-hover:bg-primary transition-colors" />
+                                                <span className="text-[11px] uppercase tracking-[0.4em] font-black text-primary/60">{res.category}</span>
+                                            </div>
+                                            <h4 className="text-2xl font-serif text-white italic leading-none group-hover:text-primary transition-colors tracking-tight uppercase mb-4">{res.name}</h4>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-2xl font-serif font-bold text-white tracking-widest group-hover:text-primary transition-colors">₹{res.base_price.toLocaleString()}</span>
+                                            <p className="text-[9px] text-white/90 font-black uppercase tracking-[0.4em] mt-1 pr-1 border-r-2 border-primary/20 inline-block bg-white/5 py-0.5 px-2 rounded-sm italic">/ unit</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-white/70 font-medium mb-8 leading-relaxed">{res.description}</p>
+                                </div>
+
+                                <Button
+                                    onClick={() => handleAddToCart(res._id)}
+                                    variant="luxury"
+                                    className="w-full h-14 rounded-xl flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-[0.4em] mt-auto"
+                                >
+                                    <Plus size={14} className="group-hover/btn:scale-125 transition-transform" />
+                                    Add to Mission Plan
+                                </Button>
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
-            </div>
 
-            {/* Sidebar Cart & AI */}
-            <div className="space-y-6">
-                {/* AI Command Feedback */}
-                {/* <div className="glass-panel p-6 rounded-3xl border border-blue-500/20 bg-blue-500/5">
-                    <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-widest">
-                        <AlertTriangle className="text-blue-400" size={16} />
-                        AI Readiness Score
-                    </h3>
-                    <div className="space-y-3">
-                        {suggestions.map((s, i) => (
-                            <div key={i} className={`flex items-start gap-3 p-3 rounded-xl ${s.type === 'warning' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/20'}`}>
-                                {s.type === 'warning' ? <AlertTriangle size={16} className="mt-0.5 shrink-0" /> : <CheckCircle size={16} className="mt-0.5 shrink-0" />}
-                                <p className="text-xs leading-relaxed">{s.message}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div> */}
-
-                {/* Logistics Cart */}
-                <div className="glass-panel p-6 rounded-3xl border border-white/10 bg-white/5">
-                    <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                        <ShoppingCart size={16} />
-                        Your Event Cart
-                    </h3>
-                    <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-                        {cart.length === 0 && <p className="text-center text-xs text-gray-500 py-8 italic">No items selected yet</p>}
-                        {cart.map((item) => (
-                            <div key={item._id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold text-white truncate">{item.resource?.name}</p>
-                                    <p className="text-[10px] text-gray-500">₹{item.resource?.base_price} x {item.quantity}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => handleAddToCart(item.resource._id, Math.max(0, item.quantity - 1))} className="p-1 rounded bg-white/10 hover:bg-white/20"><Minus size={12} /></button>
-                                    <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
-                                    <button onClick={() => handleAddToCart(item.resource._id, item.quantity + 1)} className="p-1 rounded bg-white/10 hover:bg-white/20"><Plus size={12} /></button>
-                                </div>
-                            </div>
-                        ))}
+                {/* Sidebar Cart */}
+                <div className="space-y-8">
+                    <div className="flex items-center gap-3 px-1">
+                        <div className="h-6 w-1 bg-primary rounded-full shadow-glow" />
+                        <h3 className="text-xl font-serif italic font-black text-white uppercase tracking-widest pl-1 leading-none">Logistics Payload</h3>
                     </div>
 
-                    <div className="mt-6 pt-6 border-t border-white/5 space-y-3">
-                        <div className="flex justify-between items-center text-white">
-                            <span className="text-xs font-medium text-gray-400">Estimated Budget</span>
-                            <span className="text-lg font-bold">₹{calculateTotal()}</span>
+                    <div className="app-card p-8 bg-zinc-950/80 backdrop-blur-2xl border-white/5 relative group overflow-hidden shadow-elite">
+                        <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                        <div className="absolute -bottom-32 -right-32 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[140px] pointer-events-none" />
+
+                        <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                            {cart.length === 0 ? (
+                                <div className="text-center py-12 flex flex-col items-center gap-4 opacity-10">
+                                    <ShoppingCart size={32} />
+                                    <p className="text-[11px] font-black uppercase tracking-[0.4em]">No resources allocated</p>
+                                </div>
+                            ) : (
+                                cart.map((item) => (
+                                    <div key={item._id} className="p-4 rounded-[1.25rem] bg-white/[0.01] border border-white/5 group/item hover:border-primary/30 hover:bg-white/[0.03] hover:shadow-glow transition-all duration-300 relative overflow-hidden">
+                                        <div className="flex items-center justify-between gap-4 mb-5 relative z-10">
+                                            <div className="flex-1 min-w-0 pr-2">
+                                                <p className="text-xs font-serif italic font-black text-white uppercase tracking-widest truncate group-hover/item:text-primary transition-colors">{item.resource?.name}</p>
+                                                <p className="text-[11px] text-white/90 font-bold uppercase tracking-widest mt-1">₹{item.resource?.base_price.toLocaleString()} <span className="text-white/70 ml-1">UNIT_COST</span></p>
+                                            </div>
+                                            <button className="w-8 h-8 rounded-lg bg-rose-500/5 border border-rose-500/10 text-rose-500/40 hover:text-rose-500 hover:border-rose-500/30 flex items-center justify-center transition-all">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center justify-between bg-zinc-950 rounded-xl p-1 border border-white/5 relative z-10">
+                                            <button
+                                                onClick={() => handleAddToCart(item.resource._id, Math.max(0, item.quantity - 1))}
+                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                                            >
+                                                <Minus size={12} />
+                                            </button>
+                                            <span className="text-xs font-black text-white tracking-[0.3em] font-serif italic">{item.quantity.toString().padStart(2, '0')}</span>
+                                            <button
+                                                onClick={() => handleAddToCart(item.resource._id, item.quantity + 1)}
+                                                className="w-8 h-8 rounded-lg flex items-center justify-center text-primary hover:text-primary-hover hover:bg-primary/10 transition-all font-black"
+                                            >
+                                                <Plus size={12} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
-                        <p className="text-[10px] text-gray-500 flex items-center gap-1 italic">
-                            <Zap size={10} /> AI suggests cost is within 15% of market rate.
-                        </p>
+
+                        <div className="mt-8 pt-6 border-t border-white/5 space-y-6 relative z-10">
+                            <div className="flex justify-between items-end">
+                                <span className="text-[11px] font-black text-white/70 uppercase tracking-[0.4em] pb-1">Projected Budget</span>
+                                <div className="text-right">
+                                    <span className="text-4xl md:text-5xl font-serif font-black text-white italic tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">₹{calculateTotal().toLocaleString()}</span>
+                                </div>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-start gap-4">
+                                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
+                                    <Zap size={14} className="text-primary" />
+                                </div>
+                                <p className="text-[11px] text-primary/80 font-medium leading-relaxed uppercase tracking-widest pt-1">
+                                    AI Suggests: Cost parameters optimized within 15% of market index.
+                                </p>
+                            </div>
+
+                            <Button 
+                                variant="luxury"
+                                className="w-full h-14 rounded-xl font-black text-xs uppercase tracking-[0.4em]"
+                                onClick={() => toast.success('Allocation Parameters Locked')}
+                            >
+                                Finalize Allocation
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
