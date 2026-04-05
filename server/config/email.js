@@ -5,13 +5,18 @@ const sendEmail = async (options) => {
 
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         console.log(`Using SMTP configuration: ${process.env.EMAIL_SERVICE || 'gmail'} for ${process.env.EMAIL_USER}`);
-        // Use provided credentials
+        // Use provided credentials with more reliable port 587
         transporter = nodemailer.createTransport({
-            service: process.env.EMAIL_SERVICE || 'gmail',
+            host: "smtp.gmail.com",
+            port: 587,
+            secure: false, // Port 587 uses STARTTLS
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
             },
+            connectionTimeout: 15000, // 15 seconds
+            greetingTimeout: 10000,
+            socketTimeout: 20000
         });
     } else {
         // Fallback to dynamic Ethereal test account
