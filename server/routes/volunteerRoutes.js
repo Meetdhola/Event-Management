@@ -12,7 +12,8 @@ const {
     getEventTasks,
     deleteTask,
     getAllVolunteerTasks,
-    updatePushSubscription
+    updatePushSubscription,
+    triggerSOS
 } = require('../controllers/volunteerController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -27,6 +28,7 @@ router.get('/tasks/:eventId', authorize('Volunteer', 'Admin'), getVolunteerTasks
 router.get('/all-tasks', authorize('Volunteer', 'Admin'), getAllVolunteerTasks);
 router.patch('/tasks/:taskId', authorize('Volunteer', 'Admin'), updateTaskStatus);
 router.get('/events', authorize('Volunteer', 'Admin'), getVolunteerEvents);
+router.post('/sos', authorize('Volunteer', 'Admin'), triggerSOS);
 
 // Manager/Admin routes
 router.post('/tasks', authorize('EventManager', 'Admin'), assignTask);

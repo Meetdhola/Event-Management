@@ -35,10 +35,30 @@ const checkInAttendee = async (req, res) => {
         }
 
         const ticket = await Ticket.findOne({ qr_code }).populate('event_id', 'event_name start_date');
-
         if (!ticket) {
             return res.status(404).json({ message: 'Invalid Ticket: QR Code not found' });
         }
+
+        // --- Task-Based Authorization Check ---
+        // Verify if the current user (if Volunteer) has an assigned task for this event related to scanning
+        if (req.user.role === 'Volunteer') {
+            const volunteerTasks = await Task.find({
+                assignedTo: req.user.id,
+                eventId: ticket.event_id._id
+            });
+
+            const scanKeywords = ['scan', 'qr', 'check-in', 'entry', 'gate', 'security', 'verification'];
+            const isAuthorizedToScan = volunteerTasks.some(task => 
+                scanKeywords.some(keyword => task.title.toLowerCase().includes(keyword))
+            );
+
+            if (!isAuthorizedToScan) {
+                return res.status(403).json({ 
+                    message: `Strategic Lock: You are not authorized for entry verification at ${ticket.event_id.event_name}. No scanning task assigned to your unit.` 
+                });
+            }
+        }
+        // ----------------------------------------
 
         // Find the first guest who is not checked in
         const attendeeToCheckIn = ticket.attendees.find(a => !a.is_checked_in);
@@ -357,6 +377,48 @@ const updatePushSubscription = async (req, res) => {
     }
 };
 
+// @desc    Trigger emergency SOS (REST-based trigger for higher reliability)
+// @route   POST /api/volunteer/sos
+// @access  Private/Volunteer/Admin
+const triggerSOS = async (req, res) => {
+    try {
+        const { eventId, eventName, volunteerName, location, timestamp } = req.body;
+
+        if (!eventName || !volunteerName) {
+            return res.status(400).json({ message: 'Incomplete emergency signal data' });
+        }
+
+        const alertData = {
+            eventId,
+            eventName,
+            volunteerName,
+            location,
+            timestamp: timestamp || new Date().toISOString()
+        };
+
+        // Server-Side Broadcast (The most reliable way to ensure delivery)
+        if (req.io) {
+            console.log('REST SOS RECEIVED - BROADCASTING:', alertData);
+            
+            // 1. Target specific event room
+            if (eventId) {
+                req.io.to(`event_${eventId}`).emit('emergency_alert', alertData);
+            }
+
+            // 2. Target specific management rooms
+            req.io.to('admin_room').emit('volunteer_emergency', alertData);
+            req.io.to('manager_room').emit('volunteer_emergency', alertData);
+
+            // 3. Global broadcast failsafe
+            req.io.emit('broadcast_emergency', alertData);
+        }
+
+        res.status(200).json({ message: 'Emergency signal processed and broadcasted' });
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to dispatch SOS', error: error.message });
+    }
+};
+
 module.exports = {
     checkInAttendee,
     getVolunteerStats,
@@ -369,5 +431,6 @@ module.exports = {
     getEventTasks,
     deleteTask,
     getAllVolunteerTasks,
-    updatePushSubscription
+    updatePushSubscription,
+    triggerSOS
 };

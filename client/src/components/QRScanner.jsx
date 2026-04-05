@@ -26,32 +26,34 @@ const QRScanner = ({ onScan, onClose }) => {
             }
 
             const config = {
-                fps: 10,
+                fps: 20, // Increased for tactical smoothness
                 qrbox: (viewfinderWidth, viewfinderHeight) => {
-                    return {
-                        width: viewfinderWidth * 0.8,
-                        height: viewfinderHeight * 0.8
-                    };
+                    const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.75;
+                    return { width: size, height: size };
                 },
-                aspectRatio: 1.0
+                aspectRatio: 1.0,
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true // Native hardware acceleration
+                }
             };
 
             await scannerRef.current.start(
                 { facingMode: "environment" },
                 config,
                 async (decodedText) => {
-                    // Prevent multiple scans
-                    if (scannerRef.current?.getState() !== 'scanning') return;
-                    
-                    // Pause scanner visual updates during processing
-                    if (scannerRef.current.isScanning) {
-                        try {
-                            scannerRef.current.pause(true); // pause video but keep stream
-                        } catch (e) {
-                            console.warn("Could not pause scanner", e);
-                        }
+                    // --- STRIC SCAN LOCK ---
+                    // Immediately lock the callback to prevent recursive triggers in 1 second
+                    const currentState = scannerRef.current?.getState();
+                    if (currentState !== 2) return; // 2 is scanning state in html5-qrcode
+
+                    // Force pause the video stream immediately to visibly stop scanning
+                    try {
+                        await scannerRef.current.pause(true);
+                    } catch (e) {
+                        console.warn("Could not pause scanner", e);
                     }
                     
+                    // Transmit to processing handler
                     handleCodeCheck(decodedText);
                 },
                 (errorMessage) => {
@@ -144,8 +146,8 @@ const QRScanner = ({ onScan, onClose }) => {
                         <div className="flex items-center gap-4">
                             <div className={`w-2 h-2 rounded-full ${isCameraActive ? 'bg-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.7)]' : 'bg-red-500'}`} />
                             <div className="flex flex-col">
-                                <span className="text-xs font-black text-white uppercase tracking-[0.4em]">System.Verify_OS</span>
-                                <span className="text-[9px] font-black text-white/70 uppercase tracking-[0.2em] mt-0.5" >Stream: QR_MATRIC_DECRYPT</span>
+                                <span className="text-xs font-black text-white uppercase tracking-[0.4em]">Ticket Scanner</span>
+                                <span className="text-[9px] font-black text-white/70 uppercase tracking-[0.2em] mt-0.5" >Scanning Ticket...</span>
                             </div>
                         </div>
                         <Button
@@ -174,7 +176,7 @@ const QRScanner = ({ onScan, onClose }) => {
                                     <div className="absolute bottom-8 flex gap-4 w-full px-6">
                                         <div className="flex-1 flex gap-2 items-center justify-center px-4 py-2 rounded-full bg-black/40 border border-white/5 backdrop-blur-md">
                                             <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
-                                            <span className="text-[11px] font-black text-white/80 uppercase tracking-widest">Awaiting_Sync</span>
+                                            <span className="text-[11px] font-black text-white/80 uppercase tracking-widest">Ready for Scan</span>
                                         </div>
                                         <Button 
                                             variant="ghost-luxury"
@@ -193,7 +195,7 @@ const QRScanner = ({ onScan, onClose }) => {
                                         <div className="h-16 w-16 rounded-full border-2 border-primary/10 border-t-primary animate-spin" />
                                         <div className="absolute inset-0 h-16 w-16 rounded-full border border-white/5 animate-pulse" />
                                     </div>
-                                    <span className="text-[11px] font-black text-white/90 uppercase tracking-[0.5em] mt-6 animate-pulse">DECODING TICKET...</span>
+                                    <span className="text-[11px] font-black text-white/90 uppercase tracking-[0.5em] mt-6 animate-pulse">VERIFYING TICKET...</span>
                                 </motion.div>
                             )}
 
@@ -205,7 +207,7 @@ const QRScanner = ({ onScan, onClose }) => {
                                     <h3 className="text-xl font-black text-white uppercase tracking-wider mb-2">{scanResult?.attendee}</h3>
                                     <p className="text-[11px] font-black text-emerald-400/60 uppercase tracking-[0.3em] mb-8">Access Granted • Ticket #{scanResult?.ticketId}</p>
                                     <Button onClick={handleResume} variant="luxury" className="w-full h-12 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-                                        Scan Next Guest
+                                        Scan Next
                                     </Button>
                                 </motion.div>
                             )}
@@ -216,13 +218,13 @@ const QRScanner = ({ onScan, onClose }) => {
                                         <Camera size={40} />
                                     </div>
                                     <div className="space-y-3 mb-8 text-center w-full">
-                                        <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.3em]">{hardwareError ? 'Hardware_Lock' : 'Verification_Failed'}</p>
+                                        <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.3em]">{hardwareError ? 'Camera Error' : 'Check Failed'}</p>
                                         <p className="text-[11px] font-medium text-white/80 uppercase tracking-widest leading-relaxed">
                                             {hardwareError || scanResult?.error}
                                         </p>
                                     </div>
                                     <Button onClick={hardwareError ? initializeScanner : handleResume} variant="ghost-luxury" className="w-full h-12 rounded-2xl font-black uppercase text-[11px] tracking-[0.4em]">
-                                        {hardwareError ? 'Re-Initialize' : 'Try Again'}
+                                        {hardwareError ? 'Restart Camera' : 'Try Again'}
                                     </Button>
                                 </motion.div>
                             )}
@@ -246,7 +248,7 @@ const QRScanner = ({ onScan, onClose }) => {
                                                 Back to QR
                                             </Button>
                                             <Button onClick={handleManualSubmit} disabled={!manualCode} variant="luxury" className="flex-1 h-12 rounded-xl text-black font-black uppercase text-[11px] tracking-[0.2em] shadow-glow disabled:opacity-50">
-                                                Verify Auth
+                                                Verify ID
                                             </Button>
                                         </div>
                                     </div>
@@ -259,7 +261,7 @@ const QRScanner = ({ onScan, onClose }) => {
                                         <div className="h-16 w-16 rounded-full border-2 border-primary/10 border-t-primary animate-spin" />
                                         <div className="absolute inset-0 h-16 w-16 rounded-full border border-white/5 animate-pulse" />
                                     </div>
-                                    <span className="text-[11px] font-black text-white/70 uppercase tracking-[0.5em] animate-pulse">Initializing_Feed</span>
+                                    <span className="text-[11px] font-black text-white/70 uppercase tracking-[0.5em] animate-pulse">Starting Camera...</span>
                                 </div>
                             )}
                         </AnimatePresence>
@@ -276,10 +278,10 @@ const QRScanner = ({ onScan, onClose }) => {
                         </div>
                         <div className="space-y-1">
                             <p className="text-[11px] font-black text-white/90 uppercase tracking-[0.5em] text-center italic">
-                                Authorized Entry Verification
+                                Guest Entry Check
                             </p>
                             <p className="text-[11px] font-medium text-white/70 uppercase tracking-[0.2em] text-center">
-                                End-to-end encrypted optical stream active
+                                Secure scanning active
                             </p>
                         </div>
                     </div>

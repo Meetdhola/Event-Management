@@ -23,6 +23,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Badge, Card, Button, Input } from '../components/ui/Components';
 import { toast } from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
+import { socket } from '../lib/socket';
+import { AlertTriangle, Clock, MessageSquare, Send } from 'lucide-react';
 
 const LiveCountdown = ({ targetDate, eventName }) => {
     const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
@@ -88,10 +90,73 @@ const AttendeeDashboard = () => {
     const [ticketQuantity, setTicketQuantity] = useState(1);
     const [attendees, setAttendees] = useState([]);
     const [isBooking, setIsBooking] = useState(false);
+    const [crowdReports, setCrowdReports] = useState([]);
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [isReporting, setIsReporting] = useState(false);
+    const [reportForm, setReportForm] = useState({ location: '', status: 'Normal', message: '' });
+
+    const upcomingTickets = tickets.filter(t => new Date(t.event_id?.start_date) > new Date()).sort((a,b) => new Date(a.event_id?.start_date) - new Date(b.event_id?.start_date));
+    const nextTicket = upcomingTickets.length > 0 ? upcomingTickets[0] : null;
 
     useEffect(() => {
         fetchAttendeeData();
     }, []);
+
+    useEffect(() => {
+        if (nextTicket?.event_id?._id) {
+            const eventId = nextTicket.event_id._id;
+            fetchCrowdReports(eventId);
+            
+            socket.emit('join_room', `event_${eventId}`);
+            
+            const handleUpdate = (newReport) => {
+                setCrowdReports(prev => [newReport, ...prev].slice(0, 20));
+                toast(`New Crowd Alert: ${newReport.location} is ${newReport.status}`, {
+                    icon: '🚨',
+                    style: {
+                        borderRadius: '1rem',
+                        background: '#09090b',
+                        color: '#d4af37',
+                        border: '1px solid rgba(212, 175, 55, 0.2)',
+                        fontSize: '11px',
+                        fontWeight: '900',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em'
+                    }
+                });
+            };
+
+            socket.on('crowd_update', handleUpdate);
+            return () => socket.off('crowd_update', handleUpdate);
+        }
+    }, [nextTicket?.event_id?._id]);
+
+    const fetchCrowdReports = async (eventId) => {
+        try {
+            const res = await axios.get(`/crowd/event/${eventId}`);
+            setCrowdReports(res.data);
+        } catch (error) {
+            console.error('Error fetching crowd reports:', error);
+        }
+    };
+
+    const submitReport = async () => {
+        if (!reportForm.location) return toast.error('Specify location');
+        setIsReporting(true);
+        try {
+            await axios.post('/crowd/report', {
+                event_id: nextTicket.event_id._id,
+                ...reportForm
+            });
+            setShowReportModal(false);
+            setReportForm({ location: '', status: 'Normal', message: '' });
+            toast.success('Status Transmitted to Elite Stream');
+        } catch (error) {
+            toast.error('Email Failed');
+        } finally {
+            setIsReporting(false);
+        }
+    };
 
     const fetchAttendeeData = async () => {
         try {
@@ -159,13 +224,12 @@ const AttendeeDashboard = () => {
         setAttendees(newAttendees);
     };
 
-    const filteredEvents = events.filter(e =>
-        e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.venue.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const upcomingTickets = tickets.filter(t => new Date(t.event_id?.start_date) > new Date()).sort((a,b) => new Date(a.event_id?.start_date) - new Date(b.event_id?.start_date));
-    const nextTicket = upcomingTickets.length > 0 ? upcomingTickets[0] : null;
+    const filteredEvents = events.filter(e => {
+        const isUpcoming = new Date(e.start_date) > new Date();
+        const matchesSearch = e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                             e.venue.toLowerCase().includes(searchQuery.toLowerCase());
+        return isUpcoming && matchesSearch;
+    });
 
     if (loading) {
         return (
@@ -212,7 +276,8 @@ const AttendeeDashboard = () => {
                 <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/5">
                     {[
                         { id: 'explore', label: 'Discover', icon: Compass },
-                        { id: 'vault', label: 'My Vault', icon: Ticket }
+                        { id: 'vault', label: 'My Vault', icon: Ticket },
+                        { id: 'live', label: 'Live Status', icon: Activity }
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -288,7 +353,7 @@ const AttendeeDashboard = () => {
                                 ))}
                             </div>
                         </motion.div>
-                    ) : (
+                    ) : activeTab === 'vault' ? (
                         <motion.div key="vault" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="space-y-6">
                             <h2 className="text-[11px] font-black text-white/90 px-1 uppercase tracking-[0.4em]">My Secure Encrypts</h2>
                             {tickets.length === 0 ? (
@@ -341,6 +406,84 @@ const AttendeeDashboard = () => {
                                 </div>
                             )}
                         </motion.div>
+                    ) : (
+                        <motion.div key="live" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                            <div className="flex items-center justify-between px-1">
+                                <h2 className="text-[11px] font-black text-white/90 uppercase tracking-[0.4em]">Live Updates</h2>
+                                {nextTicket && (
+                                    <button
+                                        onClick={() => setShowReportModal(true)}
+                                        className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-4 py-2 rounded-full border border-primary/20 hover:bg-primary hover:text-background transition-all shadow-glow"
+                                    >
+                                        <AlertTriangle size={12} />
+                                        Report Status
+                                    </button>
+                                )}
+                            </div>
+
+                            {!nextTicket ? (
+                                <div className="py-24 flex flex-col items-center justify-center app-card border-dashed opacity-10">
+                                    <Activity size={48} className="mb-4" />
+                                    <p className="text-[11px] font-black uppercase tracking-[0.5em]">Waiting for event. Scan your ticket to see updates.</p>
+                                </div>
+                            ) : crowdReports.length === 0 ? (
+                                <div className="py-24 flex flex-col items-center justify-center app-card border border-white/5 rounded-[2rem] bg-zinc-950/50">
+                                    <Sparkles size={32} className="text-primary/50 mb-4 animate-pulse" />
+                                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.5em]">Everything is clear right now.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {crowdReports.map((report, index) => (
+                                        <motion.div
+                                            key={report._id}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.05 }}
+                                            className="app-card p-6 bg-zinc-950 border border-white/5 rounded-2xl relative overflow-hidden group"
+                                        >
+                                            <div className={`absolute top-0 left-0 w-1 h-full ${
+                                                report.status === 'Very Crowded' ? 'bg-red-500' : 
+                                                report.status === 'Crowded' ? 'bg-amber-500' : 'bg-emerald-500'
+                                            }`} />
+                                            
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] block mb-1">Area / Gate</span>
+                                                    <h4 className="text-lg font-serif italic text-white tracking-widest uppercase">{report.location}</h4>
+                                                </div>
+                                                <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest ${
+                                                    report.status === 'Very Crowded' ? 'text-red-400 border-red-400/20 bg-red-400/5' : 
+                                                    report.status === 'Crowded' ? 'text-amber-400 border-amber-400/20 bg-amber-400/5' : 
+                                                    'text-emerald-400 border-emerald-400/20 bg-emerald-400/5'
+                                                }`}>
+                                                    {report.status}
+                                                </Badge>
+                                            </div>
+
+                                            {report.message && (
+                                                <div className="flex gap-3 items-start bg-white/[0.02] p-4 rounded-xl border border-white/5 mb-4">
+                                                    <MessageSquare size={14} className="text-primary flex-shrink-0 mt-0.5" />
+                                                    <p className="text-[11px] text-white/80 font-medium leading-relaxed italic tracking-wide">{report.message}</p>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-black text-primary">
+                                                        {report.user_id?.name?.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">{report.user_id?.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-white/30">
+                                                    <Clock size={10} />
+                                                    <span className="text-[8px] font-black uppercase tracking-widest">{new Date(report.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
+                        </motion.div>
                     )}
                 </AnimatePresence>
 
@@ -365,25 +508,44 @@ const AttendeeDashboard = () => {
                                 <div className="p-10 flex flex-col items-center">
                                     <button onClick={() => setSelectedTicket(null)} className="absolute top-8 right-8 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/80 hover:text-white transition-all"><X size={20} /></button>
 
-                                    <div className="mt-4 mb-10 text-center">
+                                    <div className="mt-4 mb-4 text-center">
                                         <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-4">Entry Verified • Level 1 Access</div>
                                         <h2 className="text-2xl font-serif text-white tracking-widest uppercase italic leading-tight">{selectedTicket.event_id?.event_name}</h2>
+                                        
+                                        <div className="flex items-center justify-center gap-3 mt-6 text-[10px] font-black text-white/60 uppercase tracking-widest bg-white/5 py-3 px-6 rounded-2xl border border-white/5">
+                                            <Calendar size={12} className="text-primary" />
+                                            <span>{new Date(selectedTicket.event_id?.start_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                            <span className="text-white/20">|</span>
+                                            <Clock size={12} className="text-primary" />
+                                            <span>{new Date(selectedTicket.event_id?.start_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </div>
                                     </div>
 
                                     {/* QR Node */}
-                                    <div className="relative p-8 rounded-[2.5rem] bg-white group hover:scale-[1.02] transition-transform duration-500 shadow-[0_0_50px_rgba(255,255,255,0.1)]">
-                                        <div className="absolute inset-0 bg-primary/5 blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        <QRCodeSVG
-                                            value={selectedTicket.qr_code}
-                                            size={180}
-                                            level="H"
-                                            includeMargin={false}
-                                            className="text-zinc-950"
-                                        />
+                                    <div className="flex flex-col items-center gap-6">
+                                        <div className="relative p-7 rounded-[2.5rem] bg-white group hover:scale-[1.02] transition-transform duration-500 shadow-[0_0_50px_rgba(255,255,255,0.1)]">
+                                            <div className="absolute inset-0 bg-primary/5 blur-[40px] opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <QRCodeSVG
+                                                value={selectedTicket.qr_code}
+                                                size={160}
+                                                level="H"
+                                                includeMargin={false}
+                                                className="text-zinc-950"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col items-center gap-2">
+                                            <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.3em]">Ticket ID</span>
+                                            <div className="px-4 py-2 rounded-lg bg-zinc-900 border border-white/5 font-mono text-[11px] text-primary font-black uppercase tracking-widest select-all">
+                                                {selectedTicket.qr_code}
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="mt-12 w-full space-y-4 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">
-                                        <div className="text-[9px] font-black text-white/80 uppercase tracking-[0.4em] mb-2 px-1">Authorized Guest Stream</div>
+                                    <div className="mt-10 w-full space-y-4 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">
+                                        <div className="flex items-center justify-between px-1 mb-2">
+                                            <div className="text-[9px] font-black text-white/80 uppercase tracking-[0.4em]">Guest List</div>
+                                            <Badge variant="outline" className="text-[9px] font-black">{selectedTicket.attendees?.length} NODE{selectedTicket.attendees?.length > 1 ? 'S' : ''}</Badge>
+                                        </div>
                                         {selectedTicket.attendees?.map((att, i) => (
                                             <div key={i} className={`p-4 rounded-2xl border transition-all ${att.is_checked_in ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-white/[0.03] border-white/5'} space-y-1`}>
                                                 <div className="flex justify-between items-center">
@@ -416,7 +578,7 @@ const AttendeeDashboard = () => {
                                                 <span className="text-white truncate max-w-[140px]">{selectedTicket.event_id?.venue}</span>
                                             </div>
                                             <div className="flex justify-between items-center text-[11px] font-black uppercase tracking-[0.3em] text-white/90">
-                                                <span>Activation Status</span>
+                                                <span>Status</span>
                                                 <span className="text-emerald-500">AUTHORIZED</span>
                                             </div>
                                         </div>
@@ -448,7 +610,7 @@ const AttendeeDashboard = () => {
                                 <div className="p-8 md:p-10 space-y-8">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-2">Secure Selection Protocol</div>
+                                            <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-2">Booking Details</div>
                                             <h2 className="text-2xl font-black text-white uppercase tracking-tight">{bookingEvent.event_name}</h2>
                                         </div>
                                         <button onClick={() => setBookingEvent(null)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/80 hover:text-white transition-all backdrop-blur-3xl"><X size={20} /></button>
@@ -457,7 +619,7 @@ const AttendeeDashboard = () => {
                                     {/* Quantity Selector */}
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center px-1">
-                                            <span className="text-[11px] font-black text-white/70 uppercase tracking-widest">Select Nodes</span>
+                                            <span className="text-[11px] font-black text-white/70 uppercase tracking-widest">Select Tickets</span>
                                             <div className="flex items-center gap-6">
                                                 <button onClick={() => handleQuantityChange(ticketQuantity - 1)} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/70 hover:text-primary transition-all border border-white/5 md:w-10 md:h-10">-</button>
                                                 <span className="text-xl font-serif italic text-primary">{ticketQuantity}</span>
@@ -484,7 +646,7 @@ const AttendeeDashboard = () => {
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Mobile Protocol</label>
+                                                        <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Phone Number</label>
                                                         <input
                                                             value={attendee.phone}
                                                             onChange={(e) => updateAttendee(index, 'phone', e.target.value)}
@@ -494,12 +656,12 @@ const AttendeeDashboard = () => {
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Transmission Email</label>
+                                                    <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Email Address</label>
                                                     <input
                                                         value={attendee.email}
                                                         onChange={(e) => updateAttendee(index, 'email', e.target.value)}
                                                         className="w-full bg-white/[0.03] border border-white/5 rounded-xl py-3 px-4 text-[11px] font-black uppercase tracking-widest text-white focus:outline-none focus:border-primary/20 transition-all font-mono"
-                                                        placeholder="VIRTUAL ADDRESS"
+                                                        placeholder="guest@example.com"
                                                     />
                                                 </div>
                                             </div>
@@ -516,8 +678,92 @@ const AttendeeDashboard = () => {
                                             <div className="h-4 w-4 rounded-full border-2 border-background/20 border-t-background animate-spin" />
                                         ) : (
                                             <>
-                                                <span>Finalize Secure Entry</span>
+                                                <span>Confirm Booking</span>
                                                 <Sparkles size={16} />
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+                {/* Crowd Status Report Modal */}
+                <AnimatePresence>
+                    {showReportModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-background/95 backdrop-blur-3xl"
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0, y: 40 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0.9, opacity: 0, y: 40 }}
+                                className="w-full max-w-md rounded-[2.5rem] overflow-hidden border border-white/10 bg-zinc-950 shadow-[0_50px_100px_rgba(0,0,0,1)] p-8"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex items-center justify-between mb-8">
+                                    <div>
+                                        <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-2">Live Updates</div>
+                                        <h2 className="text-2xl font-black text-white uppercase tracking-tight italic font-serif">Report Status.</h2>
+                                    </div>
+                                    <button onClick={() => setShowReportModal(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/80 hover:text-white transition-all"><X size={20} /></button>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Area Name (e.g. Gate 1)</label>
+                                        <input
+                                            value={reportForm.location}
+                                            onChange={(e) => setReportForm({ ...reportForm, location: e.target.value })}
+                                            className="w-full bg-white/[0.03] border border-white/5 rounded-xl py-4 px-5 text-[11px] font-black uppercase tracking-widest text-white focus:outline-none focus:border-primary/20 transition-all font-mono"
+                                            placeholder="E.G. GATE 1, FOOD COURT..."
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Density Level</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {['Clear', 'Normal', 'Crowded', 'Very Crowded'].map(lvl => (
+                                                <button
+                                                    key={lvl}
+                                                    onClick={() => setReportForm({ ...reportForm, status: lvl })}
+                                                    className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                                                        reportForm.status === lvl 
+                                                        ? 'bg-primary text-background border-primary shadow-glow' 
+                                                        : 'bg-white/[0.02] text-white/60 border-white/5 hover:border-white/10'
+                                                    }`}
+                                                >
+                                                    {lvl}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Optional Details</label>
+                                        <textarea
+                                            value={reportForm.message}
+                                            onChange={(e) => setReportForm({ ...reportForm, message: e.target.value })}
+                                            className="w-full bg-white/[0.03] border border-white/5 rounded-xl py-4 px-5 text-[11px] font-black uppercase tracking-widest text-white focus:outline-none focus:border-primary/20 transition-all font-mono min-h-[100px] resize-none"
+                                            placeholder="E.G. GATE 1 CROWDED, MOVE TO GATE 2..."
+                                        />
+                                    </div>
+
+                                    <Button
+                                        onClick={submitReport}
+                                        disabled={isReporting || !reportForm.location}
+                                        variant="luxury"
+                                        className="w-full h-16 rounded-[2rem] text-[10px] font-black uppercase tracking-[0.3em] italic shadow-glow disabled:opacity-50"
+                                    >
+                                        {isReporting ? (
+                                            <div className="h-4 w-4 rounded-full border-2 border-background/20 border-t-background animate-spin" />
+                                        ) : (
+                                            <>
+                                                <span>Send Report</span>
+                                                <Send size={14} />
                                             </>
                                         )}
                                     </Button>

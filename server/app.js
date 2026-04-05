@@ -49,6 +49,7 @@ app.use('/api/volunteer', require('./routes/volunteerRoutes'));
 app.use('/api/tickets', require('./routes/ticketRoutes'));
 app.use('/api/hiring', require('./routes/hiringRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
+app.use('/api/crowd', require('./routes/crowdRoutes'));
 
 // Socket.io connection handler
 io.on('connection', (socket) => {
@@ -60,11 +61,14 @@ io.on('connection', (socket) => {
     });
 
     socket.on('volunteer_emergency', (data) => {
-        console.log('VOLUNTEER EMERGENCY RECEIVED:', data);
-        // Relay to admin room
+        console.log('ULTRA-SOS TRIGGERED BY VOLUNTEER:', data);
+        // Relay to relevant selective rooms
         io.to('admin_room').emit('volunteer_emergency', data);
-        // Also relay to event-specific managers if needed
+        io.to('manager_room').emit('volunteer_emergency', data);
         io.to(`event_${data.eventId}`).emit('emergency_alert', data);
+        
+        // Final fallback: Global broadcast to everyone to ensure delivery
+        io.emit('broadcast_emergency', data);
     });
 
     socket.on('disconnect', () => {

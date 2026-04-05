@@ -1,3 +1,5 @@
+import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -109,5 +111,65 @@ export const Badge = ({ children, variant = 'default', className }) => {
         )}>
             {children}
         </span>
+    );
+};
+
+export const Tooltip = ({ children, text }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    const [coords, setCoords] = useState({ x: 0, y: 0 });
+    const wrapperRef = useRef(null);
+
+    const updateCoords = () => {
+        if (wrapperRef.current) {
+            const rect = wrapperRef.current.getBoundingClientRect();
+            setCoords({
+                x: rect.left + rect.width / 2,
+                y: rect.top   // fixed position, no scrollY needed for fixed elements
+            });
+        }
+    };
+
+    const handleMouseEnter = () => {
+        updateCoords();
+        setIsVisible(true);
+    };
+
+    const handleMouseLeave = () => {
+        setIsVisible(false);
+    };
+
+    const tooltip = (
+        <AnimatePresence mode="wait">
+            {isVisible && (
+                <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.92 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.92 }}
+                    transition={{ duration: 0.15 }}
+                    style={{
+                        position: 'fixed',
+                        left: coords.x,
+                        top: coords.y - 8,
+                        transform: 'translate(-50%, -100%)',
+                        zIndex: 99999
+                    }}
+                    className="whitespace-nowrap px-4 py-2 rounded-xl bg-zinc-950 border border-primary/20 shadow-[0_10px_30px_rgba(0,0,0,0.9)] pointer-events-none backdrop-blur-xl"
+                >
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">{text}</span>
+                    </div>
+                    {/* Arrow pointing down */}
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-[-5px] w-2 h-2 bg-zinc-950 border-r border-b border-primary/20 rotate-45" />
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+
+    return (
+        <div ref={wrapperRef} className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+            {children}
+            {createPortal(tooltip, document.body)}
+        </div>
     );
 };

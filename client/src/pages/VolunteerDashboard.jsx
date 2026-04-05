@@ -77,7 +77,7 @@ const VolunteerDashboard = () => {
                     // Send to backend
                     await axios.post('/volunteer/subscribe', { subscription });
 
-                    toast.success('Offline Command Linked', {
+                    toast.success('Alert System Linked', {
                         icon: '🛰️',
                         style: { background: '#d4af37', color: '#000', fontWeight: 'bold' }
                     });
@@ -85,7 +85,7 @@ const VolunteerDashboard = () => {
             }
         } catch (error) {
             console.error('Push sync failed:', error);
-            toast.error('Tactical sync failed. Ensure you are on a secure connection.');
+            toast.error('Alert sync failed. Please check your connection.');
         }
     };
 
@@ -193,7 +193,7 @@ const VolunteerDashboard = () => {
         joinRoom(`volunteer_${volunteerId}`);
         
         const handleNewMission = (newTask) => {
-            toast.success(`NEW MISSION DETECTED: ${newTask.title}`, {
+            toast.success(`NEW TASK ASSIGNED: ${newTask.title}`, {
                 icon: '🎯',
                 style: { background: '#d4af37', color: '#000', fontWeight: 'bold' }
             });
@@ -201,21 +201,21 @@ const VolunteerDashboard = () => {
             const newNotification = {
                 id: Date.now(),
                 type: 'mission',
-                title: 'New Mission Target',
+                title: 'New Task Alert',
                 message: `Assigned: ${newTask.title}`,
-                eventName: newTask.eventId?.event_name || 'Global Command',
+                eventName: newTask.eventId?.event_name || 'Event Assignment',
                 timestamp: new Date(),
                 read: false
             };
             
             setNotifications(prev => [newNotification, ...prev]);
-            sendNativeNotification('COMMAND: NEW MISSION TARGET', `Objective: ${newTask.title} | Sector: ${newNotification.eventName}`);
+            sendNativeNotification('NEW TASK ASSIGNED', `Task: ${newTask.title} | Event: ${newNotification.eventName}`);
             fetchInitialData();
         };
 
         const handleTaskDeleted = (data) => {
-            const missionTitle = typeof data === 'string' ? 'Target' : data.title;
-            toast.error('Mission aborted/rescinded by centralized command.', {
+            const taskTitle = typeof data === 'string' ? 'Task' : data.title;
+            toast.error('Task cancelled by system administrator.', {
                 icon: '🗑️',
                 style: { background: '#ef4444', color: '#fff', fontWeight: 'bold' }
             });
@@ -223,15 +223,15 @@ const VolunteerDashboard = () => {
             const newNotification = {
                 id: Date.now(),
                 type: 'aborted',
-                title: 'Mission Rescinded',
-                message: `Aborted: ${missionTitle}`,
-                eventName: data.eventName || 'Global Command',
+                title: 'Task Cancelled',
+                message: `Removed: ${taskTitle}`,
+                eventName: data.eventName || 'Event Update',
                 timestamp: new Date(),
                 read: false
             };
             
             setNotifications(prev => [newNotification, ...prev]);
-            sendNativeNotification('COMMAND: MISSION RESCINDED', `Objective: ${missionTitle} | Status: Aborted by centralized command`);
+            sendNativeNotification('TASK CANCELLED', `Removed: ${taskTitle} | Status: Cancelled by admin`);
             setTasks(prev => prev.filter(t => t._id !== (data.taskId || data)));
             fetchInitialData();
         };
@@ -281,30 +281,48 @@ const VolunteerDashboard = () => {
         };
     }, [selectedEvent]);
 
-    const handleSOS = () => {
-        if (!selectedEvent) return;
+    const handleSOS = async () => {
+        if (!selectedEvent) {
+            toast.error('Tactical Error: Select an active deployment zone first', { icon: '⚠️' });
+            return;
+        }
         
         setEmergencyLoading(true);
-        socket.emit('volunteer_emergency', {
-            eventId: selectedEvent._id,
-            eventName: selectedEvent.event_name,
-            volunteerName: user.name,
-            location: selectedEvent.venue,
-            timestamp: new Date().toISOString()
-        });
+        try {
+            // REST-based SOS is much more reliable on flaky mobile/cellular connections
+            await axios.post('/volunteer/sos', {
+                eventId: selectedEvent._id,
+                eventName: selectedEvent.event_name,
+                volunteerName: user.name,
+                location: selectedEvent.venue,
+                timestamp: new Date().toISOString()
+            });
 
-        setTimeout(() => {
-            setEmergencyLoading(false);
+            // Sound confirmation for volunteer
+            try {
+                const alarm = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                alarm.volume = 0.3;
+                alarm.play().catch(e => console.log('Audio playback prevented:', e));
+            } catch (e) {
+                console.error('Sound system error:', e);
+            }
+
             toast.error('EMERGENCY SIGNAL DISPATCHED', {
                 duration: 5000,
                 icon: '🚨',
                 style: {
-                    background: '#ef4444',
+                    background: '#7f1d1d',
                     color: '#fff',
-                    fontWeight: 'bold'
+                    fontWeight: 'black',
+                    border: '1px solid #ef4444'
                 }
             });
-        }, 1000);
+        } catch (error) {
+            console.error('SOS Failure:', error);
+            toast.error('COMMUNICATIONS FAILURE: Manual alert required');
+        } finally {
+            setEmergencyLoading(false);
+        }
     };
 
     const fetchInitialData = async () => {
@@ -369,8 +387,8 @@ const VolunteerDashboard = () => {
     const handleUpdateTaskStatus = async (taskId, newStatus) => {
         try {
             await axios.patch(`/volunteer/tasks/${taskId}`, { status: newStatus });
-            toast.success(`Mission Update: ${newStatus}`);
-            fetchInitialData(); // Refresh global list
+            toast.success(`Task Update: ${newStatus}`);
+            fetchInitialData(); 
             if (selectedEvent) fetchEventData(selectedEvent._id); // Refresh current event list
         } catch (error) {
             toast.error('Failed to update task');
@@ -397,124 +415,128 @@ const VolunteerDashboard = () => {
         <div className="main-content px-3 pb-28 sm:pb-4">
             <div className="max-w-2xl mx-auto space-y-8">
 
-                {/* Command Header */}
-                <div className="flex items-center justify-between px-1">
-                    <div>
-                        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
-                            force <span className="text-gradient-gold-soft italic font-serif">HUB.</span>
+                {/* Volunteer Tactical Header */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 px-1 mt-4">
+                    <div className="space-y-1">
+                        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none uppercase">
+                            Volunteer <span className="text-primary italic font-serif glow-text-gold">CENTER.</span>
                         </h1>
-                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black italic">Authorized volunteer corps • Unit {user.name.split(' ')[0]}</p>
+                        <div className="flex items-center gap-3">
+                            <div className="h-[1px] w-8 bg-primary/40" />
+                            <p className="text-[10px] text-white/50 uppercase tracking-[0.4em] font-black italic">
+                                Sector: <span className="text-white">HQ_OPS</span> • Agent: <span className="text-white">{user.name.split(' ')[0]}</span>
+                            </p>
+                        </div>
                     </div>
                     
-                    <div className="flex flex-col items-end gap-3">
-                        <div className="flex items-center gap-3">
-                            {/* Native Notification Sync */}
-                            {notificationPermission !== 'granted' && (
-                                <button 
-                                    onClick={requestNotificationPermission}
-                                    className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/50 hover:bg-primary/10 hover:text-primary transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
-                                    title="Enable WhatsApp-style System Alerts"
-                                >
-                                    <Zap size={12} className="animate-pulse" />
-                                    Sync Alerts
-                                </button>
-                            )}
+                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
+                        {/* Native Notification Sync */}
+                        {notificationPermission !== 'granted' && (
+                            <button 
+                                onClick={requestNotificationPermission}
+                                className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/50 hover:bg-primary/10 hover:text-primary transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 group"
+                            >
+                                <Zap size={12} className="group-hover:animate-bounce" />
+                                Sync Alerts
+                            </button>
+                        )}
 
-                            {/* Notification Bell Hub */}
-                            <div className="relative">
-                                <button 
-                                    onClick={() => setShowNotifications(!showNotifications)}
-                                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all relative ${showNotifications ? 'bg-primary text-background' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}
-                                >
-                                    <Bell size={18} className={notifications.some(n => !n.read) ? 'animate-tada' : ''} />
-                                    {notifications.some(n => !n.read) && (
-                                        <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-background animate-pulse" />
-                                    )}
-                                </button>
+                        {/* Notification Bell Hub */}
+                        <div className="relative">
+                            <button 
+                                onClick={() => setShowNotifications(!showNotifications)}
+                                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all relative ${showNotifications ? 'bg-primary text-background' : 'bg-zinc-900 border border-white/5 text-white/50 hover:bg-white/10'}`}
+                            >
+                                <Bell size={18} className={notifications.some(n => !n.read) ? 'animate-tada' : ''} />
+                                {notifications.some(n => !n.read) && (
+                                    <span className="absolute top-3 right-3 w-2 h-2 bg-red-500 rounded-full border-2 border-zinc-950 animate-pulse" />
+                                )}
+                            </button>
 
-                                <AnimatePresence>
-                                    {showNotifications && (
-                                        <motion.div 
-                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className="absolute top-full mt-3 right-0 w-80 bg-zinc-950 border border-white/10 rounded-[2rem] shadow-2xl z-[100] overflow-hidden"
-                                        >
-                                            <div className="p-5 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                                                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">Tactical Comms</h3>
-                                                <button 
-                                                    onClick={() => {
-                                                        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-                                                        setShowNotifications(false);
-                                                    }}
-                                                    className="text-[9px] font-black text-primary uppercase"
-                                                >
-                                                    Clear All
-                                                </button>
-                                            </div>
-                                            <div className="max-h-[350px] overflow-y-auto no-scrollbar">
-                                                {notifications.length === 0 ? (
-                                                    <div className="p-12 text-center opacity-20">
-                                                        <Zap size={24} className="mx-auto mb-3" />
-                                                        <p className="text-[9px] font-black uppercase tracking-widest">No signals detected</p>
-                                                    </div>
-                                                ) : (
-                                                    notifications.map(notification => (
-                                                        <div key={notification.id} className={`p-5 border-b border-white/5 hover:bg-white/[0.03] transition-colors relative ${!notification.read ? 'bg-primary/[0.02]' : ''}`}>
-                                                            {!notification.read && <div className="absolute top-6 left-2 w-1 h-1 bg-primary rounded-full shadow-glow" />}
-                                                            <div className="flex items-start gap-4">
-                                                                <div className={`mt-1 p-2 rounded-lg ${notification.type === 'mission' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                                                                    {notification.type === 'mission' ? <Target size={14} /> : <Trash2 size={14} />}
-                                                                 </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="flex items-center justify-between mb-1">
-                                                                        <p className="text-[10px] font-black text-white uppercase tracking-tight">{notification.title}</p>
-                                                                        <span className="text-[8px] font-black text-white/30 uppercase">{new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                    </div>
-                                                                    <p className="text-[10px] text-white/60 mb-1">{notification.message}</p>
-                                                                    <p className="text-[8px] font-black text-primary uppercase tracking-[0.2em]">{notification.eventName}</p>
+                            <AnimatePresence>
+                                {showNotifications && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute top-full mt-4 right-0 w-80 bg-zinc-950 border border-white/10 rounded-[2.5rem] shadow-2xl z-[100] overflow-hidden backdrop-blur-3xl"
+                                    >
+                                        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                                            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Transmission Log</h3>
+                                            <button 
+                                                onClick={() => {
+                                                    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                                                    setShowNotifications(false);
+                                                }}
+                                                className="text-[9px] font-black text-primary uppercase tracking-widest hover:brightness-125 transition-all"
+                                            >
+                                                Wipe Logs
+                                            </button>
+                                        </div>
+                                        <div className="max-h-[400px] overflow-y-auto no-scrollbar pb-4">
+                                            {notifications.length === 0 ? (
+                                                <div className="py-20 text-center opacity-10">
+                                                    <Zap size={32} className="mx-auto mb-4" />
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.5em]">Silence in Sector</p>
+                                                </div>
+                                            ) : (
+                                                notifications.map(notification => (
+                                                    <div key={notification.id} className={`p-6 border-b border-white/5 hover:bg-white/[0.03] transition-colors relative ${!notification.read ? 'bg-primary/[0.03]' : ''}`}>
+                                                        {!notification.read && <div className="absolute top-8 left-2.5 w-1.5 h-1.5 bg-primary rounded-full shadow-glow" />}
+                                                        <div className="flex items-start gap-5">
+                                                            <div className={`mt-1 p-2.5 rounded-xl ${notification.type === 'mission' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                                                {notification.type === 'mission' ? <Target size={14} /> : <Trash2 size={14} />}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center justify-between mb-1.5">
+                                                                    <p className="text-[11px] font-black text-white uppercase tracking-tight">{notification.title}</p>
+                                                                    <span className="text-[8px] font-black text-white/20 uppercase tabular-nums">{new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                </div>
+                                                                <p className="text-[10px] text-white/60 mb-2 leading-relaxed">{notification.message}</p>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-1 h-1 rounded-full bg-primary/40" />
+                                                                    <p className="text-[8px] font-black text-primary/70 uppercase tracking-[0.3em] font-serif italic truncate">{notification.eventName}</p>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    ))
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-
-                            <button 
-                                onClick={handleSOS}
-                                disabled={emergencyLoading}
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-red-500/50 flex items-center gap-2 transition-all duration-300 ${emergencyLoading ? 'bg-red-500 text-white animate-pulse' : 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]'}`}
-                            >
-                                <Shield size={12} fill="currentColor" />
-                                {emergencyLoading ? 'SENDING...' : 'SOS'}
-                            </button>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
-                        {selectedEvent && (
-                            <div className="text-right hidden sm:block px-1">
-                                <p className="text-[9px] text-primary font-black uppercase tracking-widest mb-1 italic leading-none">Active Operations Node</p>
-                                <p className="text-[9px] font-black text-white uppercase truncate max-w-[150px] opacity-60 tracking-wider">SEC_{selectedEvent.event_name.toUpperCase().replace(/\s+/g, '_')}</p>
+
+                        <button 
+                            onClick={handleSOS}
+                            disabled={emergencyLoading}
+                            className={`flex-1 sm:flex-none px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] border-2 transition-all duration-500 relative overflow-hidden group ${emergencyLoading ? 'bg-red-600 border-red-600 text-white animate-pulse' : 'bg-red-950/20 border-red-500/30 text-red-500 hover:bg-red-600 hover:border-red-600 hover:text-white shadow-[0_0_30px_rgba(239,68,68,0.1)] hover:shadow-[0_0_40px_rgba(239,68,68,0.4)]'}`}
+                        >
+                            <div className="relative z-10 flex items-center justify-center gap-3">
+                                <Shield size={14} className="group-hover:rotate-12 transition-transform" fill="currentColor" />
+                                <span>{emergencyLoading ? 'BROADCASTING...' : 'EMERGENCY SOS'}</span>
                             </div>
-                        )}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                        </button>
                     </div>
                 </div>
 
-                {/* Performance Metrics */}
+                {/* Performance Array */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {[
                         { label: 'Total Guests', value: stats?.totalTickets || 0, icon: Users, color: 'text-primary' },
                         { label: 'Verified', value: stats?.checkedIn || 0, icon: CheckCircle2, color: 'text-emerald-500' },
                         { label: 'Remaining', value: stats?.remaining || 0, icon: Activity, color: 'text-blue-400' },
-                        { label: 'My Ops', value: tasks.length || 0, icon: Target, color: 'text-amber-500' },
+                        { label: 'My Tasks', value: tasks.length || 0, icon: Target, color: 'text-amber-500' },
                     ].map((stat, i) => (
-                        <div key={i} className="app-card p-5 flex flex-col items-center justify-center text-center group bg-zinc-900/40 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <stat.icon size={14} className={`${stat.color} opacity-40 mb-2 group-hover:opacity-100 transition-opacity`} />
-                            <p className="text-xl font-black text-white tracking-tighter group-hover:text-primary transition-colors">{stat.value}</p>
-                            <p className="text-[9px] text-white/90 font-black uppercase tracking-[0.2em] mt-1">{stat.label}</p>
+                        <div key={i} className="app-card p-6 flex flex-col items-center justify-center text-center group bg-zinc-950 border border-white/5 relative overflow-hidden transition-all hover:border-primary/20 hover:-translate-y-1">
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-all" />
+                            <div className="w-10 h-10 rounded-xl bg-white/[0.03] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <stat.icon size={18} className={`${stat.color} opacity-60 group-hover:opacity-100 transition-opacity`} />
+                            </div>
+                            <p className="text-3xl font-black text-white tracking-tighter tabular-nums drop-shadow-glow-soft">{stat.value}</p>
+                            <p className="text-[9px] text-white/30 font-black uppercase tracking-[0.3em] mt-2 group-hover:text-primary/70 transition-colors">{stat.label}</p>
                         </div>
                     ))}
                 </div>
@@ -522,35 +544,41 @@ const VolunteerDashboard = () => {
                 {/* Mission Intake Hub (High Priority - Across all assigned events) */}
                 {allTasks.filter(t => t.status === 'Pending').length > 0 && (
                     <motion.div 
-                        initial={{ opacity: 0, x: -20 }} 
-                        animate={{ opacity: 1, x: 0 }}
-                        className="p-6 rounded-[2rem] bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent border border-amber-500/30 shadow-[0_0_50px_rgba(245,158,11,0.1)] relative overflow-hidden"
+                        initial={{ opacity: 0, y: 20 }} 
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-8 rounded-[3rem] bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-950 border border-amber-500/20 shadow-[0_0_80px_rgba(245,158,11,0.05)] relative overflow-hidden group"
                     >
-                        <div className="absolute top-0 right-0 p-8 opacity-10">
-                            <Target size={120} className="text-amber-500" />
+                        <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+                            <Target size={180} className="text-amber-500" />
                         </div>
                         <div className="relative z-10">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.8)]" />
-                                <h2 className="text-[11px] font-black text-amber-500 uppercase tracking-[0.4em]">Strategic Mission Requests</h2>
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_20px_rgba(245,158,11,0.8)]" />
+                                    <h2 className="text-[12px] font-black text-amber-500 uppercase tracking-[0.5em]">Active Briefings</h2>
+                                </div>
+                                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[9px] px-3 py-1 font-black uppercase tracking-widest">{allTasks.filter(t => t.status === 'Pending').length} Pending</Badge>
                             </div>
-                            <div className="space-y-4">
+                            <div className="space-y-5">
                                 {allTasks.filter(t => t.status === 'Pending').map(task => {
-                                    const eventName = events.find(e => e._id === task.eventId)?.event_name || 'Assigned Sector';
+                                    const eventName = events.find(e => e._id === task.eventId)?.event_name || 'Central Command';
                                     return (
-                                        <div key={task._id} className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-black/40 border border-white/5 group hover:border-amber-500/40 transition-all">
+                                        <div key={task._id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-3xl bg-white/[0.02] border border-white/5 group/task hover:bg-white/[0.04] hover:border-amber-500/30 transition-all duration-500">
                                             <div className="flex-1 min-w-0">
-                                                <h3 className="text-[11px] font-black text-white uppercase tracking-tight mb-1 truncate">{task.title}</h3>
-                                                <div className="flex items-center gap-2">
-                                                    <Badge variant="outline" className="text-[8px] py-0 px-2 opacity-60">{eventName}</Badge>
-                                                    <span className="text-[9px] text-white/30 uppercase tracking-widest italic truncate">{task.description}</span>
+                                                <div className="flex items-center gap-3 mb-2">
+                                                    <span className="text-[9px] font-black text-amber-500/60 uppercase tracking-widest font-serif italic">{eventName}</span>
+                                                    <div className="w-1 h-1 rounded-full bg-white/10" />
+                                                    <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">ID_{task._id.slice(-6).toUpperCase()}</span>
                                                 </div>
+                                                <h3 className="text-lg font-black text-white uppercase tracking-tight mb-2 group-hover/task:text-amber-500 transition-colors drop-shadow-sm">{task.title}</h3>
+                                                <p className="text-[11px] text-white/50 uppercase tracking-widest italic line-clamp-1">{task.description}</p>
                                             </div>
                                             <button 
                                                 onClick={() => handleUpdateTaskStatus(task._id, 'In Progress')}
-                                                className="px-6 py-2.5 rounded-xl bg-amber-500 text-background text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-glow shadow-amber-500/30 italic whitespace-nowrap"
+                                                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-amber-500 text-zinc-950 text-[11px] font-black uppercase tracking-[0.2em] hover:scale-[1.03] active:scale-95 transition-all shadow-[0_10px_30px_rgba(245,158,11,0.2)] hover:shadow-[0_15px_40px_rgba(245,158,11,0.4)] italic whitespace-nowrap overflow-hidden relative group/btn"
                                             >
-                                                Accept Mission
+                                                <span className="relative z-10 transition-transform group-hover/btn:translate-x-1 inline-block">Accept Mission</span>
+                                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300" />
                                             </button>
                                         </div>
                                     );
@@ -560,38 +588,42 @@ const VolunteerDashboard = () => {
                     </motion.div>
                 )}
 
-                {/* Verification Scanner UI */}
-                <div className="app-card p-2 bg-gradient-to-br from-primary/10 via-transparent to-transparent border-primary/20">
-                    <div className="p-6 space-y-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-glow" />
-                            <h2 className="text-[11px] font-black text-white uppercase tracking-[0.4em]">Gate Verification Node</h2>
+                {/* Tactical Verification Hub */}
+                <div className="app-card overflow-hidden bg-zinc-950 border-white/5 relative">
+                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+                    <div className="p-8 space-y-8">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-glow" />
+                                <h2 className="text-[12px] font-black text-white uppercase tracking-[0.5em]">System Entry</h2>
+                            </div>
+                            <Badge variant="outline" className="border-primary/20 text-primary/60 text-[9px] uppercase font-black tracking-widest bg-primary/5">Node_01</Badge>
                         </div>
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div className="relative group">
-                                <QrCode className="absolute left-5 top-1/2 -translate-y-1/2 text-primary/70 group-focus-within:text-primary transition-colors" size={18} />
+                                <QrCode className="absolute left-6 top-1/2 -translate-y-1/2 text-primary/40 group-focus-within:text-primary transition-all scale-110" size={20} />
                                 <input
                                     type="text"
-                                    placeholder="SCANNING PROTOCOL: ENTER TICKET ID..."
+                                    placeholder="Enter Protocol (Ticket ID)..."
                                     value={ticketId}
                                     onChange={(e) => setTicketId(e.target.value.toLowerCase())}
                                     onKeyPress={(e) => e.key === 'Enter' && handleVerifyTicket()}
-                                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-5 pl-14 pr-16 text-xs font-black uppercase tracking-[0.2em] text-white placeholder:text-white/80 focus:outline-none focus:border-primary/40 transition-all font-mono"
+                                    className="w-full bg-white/[0.02] border border-white/10 rounded-[1.5rem] py-6 pl-16 pr-20 text-sm font-black uppercase tracking-[0.3em] text-white placeholder:text-white/20 focus:outline-none focus:border-primary/50 focus:bg-white/[0.04] transition-all font-mono"
                                 />
                                 <button
                                     onClick={() => setIsScannerOpen(true)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary hover:bg-primary hover:text-background transition-all"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary hover:bg-primary hover:text-zinc-950 transition-all shadow-glow hover:shadow-primary/40"
                                 >
-                                    <Camera size={18} />
+                                    <Camera size={22} className="group-hover:scale-110 transition-transform" />
                                 </button>
                             </div>
                             <Button
                                 onClick={() => handleVerifyTicket()}
                                 disabled={!ticketId || verifying}
                                 variant="luxury"
-                                className="w-full h-14 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-[0_0_40px_rgba(212,175,55,0.2)] disabled:opacity-20 disabled:scale-95 transition-all italic"
+                                className="w-full h-16 rounded-[1.5rem] font-black uppercase text-[11px] tracking-[0.4em] shadow-[0_20px_50px_rgba(212,175,55,0.1)] disabled:opacity-20 disabled:scale-[0.98] transition-all italic relative overflow-hidden"
                             >
-                                {verifying ? 'DECODING...' : 'AUTHORIZE ENTRY'}
+                                <span className="relative z-10">{verifying ? 'Verifying Protocol...' : 'Confirm Guest Entry'}</span>
                             </Button>
                         </div>
                     </div>
@@ -606,114 +638,119 @@ const VolunteerDashboard = () => {
                     )}
                 </AnimatePresence>
 
-                {/* Operation Selection */}
-                <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/5">
+                {/* Operations Intel Feed */}
+                <div className="flex bg-zinc-950 p-2 rounded-[2rem] border border-white/5 shadow-2xl backdrop-blur-xl">
                     {[
-                        { id: 'tasks', label: 'Mission Brief', icon: ListTodo },
+                        { id: 'tasks', label: 'My Intel', icon: ListTodo },
                         { id: 'history', label: 'History', icon: Activity },
-                        { id: 'events', label: 'Field Ops', icon: Target }
+                        { id: 'events', label: 'Sectors', icon: Target }
                     ].map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 flex items-center justify-center gap-3 py-3 rounded-xl transition-all duration-300 relative ${activeTab === tab.id
-                                ? 'bg-surface text-primary shadow-xl border border-white/5'
-                                : 'text-white/90 hover:text-white/60'}`}
+                            className={`flex-1 flex items-center justify-center gap-4 py-4 rounded-[1.5rem] transition-all duration-500 relative group ${activeTab === tab.id
+                                ? 'bg-zinc-900 text-primary shadow-glow-soft border border-white/5'
+                                : 'text-white/30 hover:text-white/60'}`}
                         >
                             {tab.id === 'tasks' && tasks.filter(t => t.status === 'Pending').length > 0 && (
-                                <span className="absolute top-2 right-2 flex h-2 w-2">
+                                <span className="absolute top-3 right-4 flex h-2.5 w-2.5">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.6)]"></span>
                                 </span>
                             )}
-                            <tab.icon size={14} className="hidden sm:block" />
-                            <span className="text-[11px] font-black uppercase tracking-widest leading-none">{tab.label}</span>
+                            <tab.icon size={16} className={`hidden sm:block transition-transform group-hover:scale-110 ${activeTab === tab.id ? 'opacity-100' : 'opacity-40'}`} />
+                            <span className="text-[12px] font-black uppercase tracking-[0.2em] leading-none">{tab.label}</span>
+                            {activeTab === tab.id && <motion.div layoutId="tab-underline" className="absolute bottom-2 w-4 h-1 bg-primary rounded-full" />}
                         </button>
                     ))}
                 </div>
 
                 <AnimatePresence mode="wait">
                     {activeTab === 'tasks' ? (
-                        <motion.div key="tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+                        <motion.div key="tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
                             {tasks.length === 0 ? (
-                                <div className="py-24 flex flex-col items-center justify-center app-card border-dashed opacity-10">
-                                    <Shield size={48} className="mb-4" />
-                                    <p className="text-[11px] font-black uppercase tracking-[0.5em]">No active mandates detected</p>
+                                <div className="py-32 flex flex-col items-center justify-center app-card border-dashed bg-zinc-950/20 opacity-20">
+                                    <Shield size={64} className="mb-6" />
+                                    <p className="text-[12px] font-black uppercase tracking-[0.6em] text-center">No assignments<br/>at this coordinates</p>
                                 </div>
                             ) : (
                                 tasks.map((task) => (
-                                    <div key={task._id} className="app-card p-5 group transition-all duration-500 bg-zinc-900/40 hover:border-primary/40">
-                                        <div className="flex items-start justify-between gap-6">
+                                    <div key={task._id} className="app-card p-6 group/item transition-all duration-700 bg-zinc-950 border-white/5 hover:border-primary/30 relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-[2px] h-full bg-primary/20 group-hover/item:bg-primary transition-colors" />
+                                        <div className="flex items-start justify-between gap-8">
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-3 mb-4">
+                                                <div className="flex items-center gap-4 mb-6">
                                                     <Badge 
                                                         variant={task.status === 'Completed' ? 'success' : task.status === 'In Progress' ? 'primary' : 'warning'} 
-                                                        className="uppercase text-[9px] font-black tracking-widest px-2 py-0.5 rounded-lg italic"
+                                                        className="uppercase text-[10px] font-black tracking-widest px-4 py-1 rounded-xl italic border-0 shadow-sm"
                                                     >
-                                                        {task.status}
+                                                        {task.status.toUpperCase()}
                                                     </Badge>
-                                                    <span className="text-[9px] text-white/70 font-bold uppercase tracking-widest">Op #{task._id.slice(-4).toUpperCase()}</span>
+                                                    <span className="text-[10px] text-white/20 font-black uppercase tracking-widest">OPS_REF_{task._id.slice(-6).toUpperCase()}</span>
                                                 </div>
-                                                <h3 className="text-[11px] font-black text-white uppercase tracking-tight mb-2 truncate group-hover:text-primary transition-colors">{task.title}</h3>
-                                                <p className="text-[11px] text-white/90 line-clamp-1 mb-4 italic leading-relaxed">{task.description}</p>
-                                                <div className="flex items-center gap-4 text-[11px] text-white/80 font-black uppercase tracking-widest">
-                                                    <span className="flex items-center gap-1.5"><Calendar size={12} className="text-primary/70" /> {new Date(task.deadline || Date.now()).toLocaleDateString()}</span>
+                                                <h3 className="text-xl font-black text-white uppercase tracking-tight mb-3 truncate group-hover/item:text-primary transition-colors leading-tight">{task.title}</h3>
+                                                <p className="text-[12px] text-white/50 line-clamp-2 mb-6 italic leading-relaxed font-serif">{task.description}</p>
+                                                <div className="flex items-center gap-6 text-[11px] text-white/30 font-black uppercase tracking-widest">
+                                                    <span className="flex items-center gap-2"><Calendar size={14} className="text-primary/40" /> {new Date(task.deadline || Date.now()).toLocaleDateString()}</span>
                                                 </div>
                                             </div>
-                                            {task.status === 'Pending' ? (
-                                                <button 
-                                                    onClick={() => handleUpdateTaskStatus(task._id, 'In Progress')} 
-                                                    className="px-4 py-2 rounded-xl bg-primary text-background font-black uppercase text-[10px] tracking-widest hover:scale-105 active:scale-95 transition-all shadow-glow shadow-primary/20 italic"
-                                                >
-                                                    Accept Mission
-                                                </button>
-                                            ) : task.status !== 'Completed' ? (
-                                                <button 
-                                                    onClick={() => handleUpdateTaskStatus(task._id, 'Completed')} 
-                                                    className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all shadow-glow"
-                                                >
-                                                    <CheckCircle2 size={24} />
-                                                </button>
-                                            ) : (
-                                                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 flex items-center justify-center">
-                                                    <CheckCircle2 size={24} />
-                                                </div>
-                                            )}
+                                            <div className="flex flex-col items-end gap-4">
+                                                {task.status === 'Pending' ? (
+                                                    <button 
+                                                        onClick={() => handleUpdateTaskStatus(task._id, 'In Progress')} 
+                                                        className="px-6 py-3 rounded-2xl bg-primary text-zinc-950 font-black uppercase text-[11px] tracking-widest hover:scale-[1.05] active:scale-95 transition-all shadow-glow italic"
+                                                    >
+                                                        Activate
+                                                    </button>
+                                                ) : task.status !== 'Completed' ? (
+                                                    <button 
+                                                        onClick={() => handleUpdateTaskStatus(task._id, 'Completed')} 
+                                                        className="w-16 h-16 rounded-[2rem] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center hover:bg-emerald-500 hover:text-zinc-950 transition-all shadow-glow hover:shadow-emerald-500/40 group/check"
+                                                    >
+                                                        <CheckCircle2 size={32} className="group-hover/check:scale-110 transition-transform" />
+                                                    </button>
+                                                ) : (
+                                                    <div className="w-16 h-16 rounded-[2rem] bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 flex items-center justify-center">
+                                                        <CheckCircle2 size={32} />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 ))
                             )}
                         </motion.div>
                     ) : activeTab === 'history' ? (
-                        <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+                        <motion.div key="history" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
                             {history.length === 0 ? (
-                                <div className="py-24 flex flex-col items-center justify-center app-card border-dashed opacity-10">
-                                    <Activity size={48} className="mb-4 text-emerald-500" />
-                                    <p className="text-[11px] font-black uppercase tracking-[0.5em] text-center">No scanning history<br/>for this operating node</p>
+                                <div className="py-32 flex flex-col items-center justify-center app-card border-dashed bg-zinc-950/20 opacity-20">
+                                    <Activity size={64} className="mb-6 text-emerald-500" />
+                                    <p className="text-[12px] font-black uppercase tracking-[0.6em] text-center">Transmission scan log<br/>is blank</p>
                                 </div>
                             ) : (
                                 history.map((record, i) => (
-                                    <div key={i} className="app-card p-5 group transition-all duration-500 bg-zinc-900/40 hover:border-emerald-500/40">
-                                        <div className="flex items-start justify-between gap-6">
+                                    <div key={i} className="app-card p-6 group transition-all duration-700 bg-zinc-950 border-white/5 hover:border-emerald-500/40 relative">
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="flex items-start justify-between gap-8 relative z-10">
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-3 mb-4">
-                                                    <Badge variant="success" className="uppercase text-[9px] font-black tracking-widest px-2 py-0.5 rounded-lg italic">
-                                                        VERIFIED
+                                                <div className="flex items-center gap-4 mb-6">
+                                                    <Badge variant="success" className="uppercase text-[10px] font-black tracking-widest px-4 py-1 rounded-xl italic border-0 shadow-emerald-500/10">
+                                                        AUTHORIZED
                                                     </Badge>
-                                                    <span className="text-[9px] text-emerald-500/50 font-bold uppercase tracking-widest leading-none">
-                                                        Gate: {record.gate}
+                                                    <span className="text-[10px] text-emerald-500/40 font-black uppercase tracking-[0.3em] leading-none">
+                                                        Point Control: {record.gate.toUpperCase()}
                                                     </span>
                                                 </div>
-                                                <h3 className="text-[11px] font-black text-white uppercase tracking-tight mb-2 truncate group-hover:text-emerald-400 transition-colors">{record.name}</h3>
-                                                <div className="flex flex-col gap-2">
-                                                    <p className="text-[11px] text-white/90 italic">Ticket: #{record.ticketId}</p>
-                                                    <div className="flex items-center gap-4 text-[11px] text-white/80 font-black uppercase tracking-widest">
-                                                        <span className="flex items-center gap-1.5"><Clock size={12} className="text-emerald-500/40" /> {new Date(record.checkedInAt).toLocaleTimeString()}</span>
+                                                <h3 className="text-xl font-black text-white uppercase tracking-tight mb-3 truncate group-hover:text-emerald-400 transition-colors leading-tight">{record.name}</h3>
+                                                <div className="flex flex-col gap-3">
+                                                    <p className="text-[11px] text-white/30 tracking-[0.3em] font-mono">CODE_{record.ticketId.toUpperCase()}</p>
+                                                    <div className="flex items-center gap-5 text-[11px] text-white/40 font-black uppercase tracking-widest">
+                                                        <span className="flex items-center gap-2"><Clock size={14} className="text-emerald-500/40" /> {new Date(record.checkedInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shadow-glow">
-                                                <CheckCircle2 size={24} />
+                                            <div className="w-16 h-16 rounded-[2rem] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 flex items-center justify-center shadow-glow-emerald">
+                                                <CheckCircle2 size={32} />
                                             </div>
                                         </div>
                                     </div>
@@ -721,36 +758,39 @@ const VolunteerDashboard = () => {
                             )}
                         </motion.div>
                     ) : (
-                        <motion.div key="events" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+                        <motion.div key="events" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-5">
                             {events.map((event) => (
                                 <div
                                     key={event._id}
                                     onClick={() => setSelectedEvent(event)}
-                                    className={`app-card p-5 group relative overflow-hidden transition-all duration-500 cursor-pointer ${selectedEvent?._id === event._id ? 'border-primary/40 bg-primary/5' : 'bg-zinc-900/40 hover:border-primary/30'}`}
+                                    className={`app-card p-6 group relative overflow-hidden transition-all duration-700 cursor-pointer ${selectedEvent?._id === event._id ? 'border-primary/50 bg-zinc-900' : 'bg-zinc-950 border-white/5 hover:border-primary/30'}`}
                                 >
-                                    <div className="flex items-start justify-between gap-6">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2" />
+                                    <div className="flex items-start justify-between gap-8 relative z-10">
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${selectedEvent?._id === event._id ? 'bg-primary animate-pulse shadow-glow' : 'bg-emerald-500'}`} />
-                                                <span className={`text-[9px] font-black uppercase tracking-widest ${selectedEvent?._id === event._id ? 'text-primary' : 'text-emerald-500'}`}>
-                                                    {selectedEvent?._id === event._id ? 'Current Node' : 'Confirmed Deployment'}
+                                            <div className="flex items-center gap-3 mb-6">
+                                                <div className={`w-2 h-2 rounded-full ${selectedEvent?._id === event._id ? 'bg-primary animate-pulse shadow-glow' : 'bg-emerald-500 shadow-glow-emerald'}`} />
+                                                <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${selectedEvent?._id === event._id ? 'text-primary animate-shine' : 'text-emerald-500'}`}>
+                                                    {selectedEvent?._id === event._id ? 'OPERATIONAL SECTOR' : 'ASSIGNED SECTOR'}
                                                 </span>
                                             </div>
-                                            <h3 className="text-xs font-black text-white uppercase tracking-tight mb-2 truncate leading-none group-hover:text-primary transition-colors">{event.event_name}</h3>
-                                            <div className="flex flex-wrap gap-x-6 gap-y-2 mt-4">
-                                                <div className="flex items-center gap-1.5 text-[11px] text-white/90 font-black uppercase tracking-widest">
-                                                    <Calendar size={12} className="text-primary/70" /> {new Date(event.start_date).toLocaleDateString()}
+                                            <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-4 truncate leading-none group-hover:text-primary transition-colors">{event.event_name}</h3>
+                                            <div className="flex flex-wrap gap-x-8 gap-y-3 mt-6">
+                                                <div className="flex items-center gap-3 text-[11px] text-white/40 font-black uppercase tracking-widest">
+                                                    <Calendar size={14} className="text-primary/50" /> {new Date(event.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-[11px] text-white/90 font-black uppercase tracking-widest truncate max-w-[150px]">
-                                                    <MapPin size={12} className="text-primary/70" /> {event.venue}
+                                                <div className="flex items-center gap-3 text-[11px] text-white/40 font-black uppercase tracking-[0.2em] truncate max-w-[200px] italic">
+                                                    <MapPin size={14} className="text-primary/50" /> {event.venue}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 text-white/80 transition-all flex items-center justify-center">
-                                            <ChevronRight size={18} />
+                                        <div className={`w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/5 text-white/20 transition-all duration-500 flex items-center justify-center group-hover:bg-primary group-hover:text-zinc-950 group-hover:scale-110 group-hover:rotate-12 ${selectedEvent?._id === event._id ? 'bg-primary text-zinc-950' : ''}`}>
+                                            <ChevronRight size={28} className="translate-x-0.5" />
                                         </div>
                                     </div>
-                                    <div className={`absolute top-0 right-0 w-1.5 h-full transition-all duration-700 ${selectedEvent?._id === event._id ? 'bg-primary' : 'bg-primary/10 group-hover:bg-primary'}`} />
+                                    {selectedEvent?._id === event._id && (
+                                        <motion.div layoutId="event-indicator" className="absolute top-0 left-0 w-1.5 h-full bg-primary shadow-glow" />
+                                    )}
                                 </div>
                             ))}
                         </motion.div>

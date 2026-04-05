@@ -31,9 +31,9 @@ const Profile = () => {
     };
 
     const stats = [
-        { label: 'Events Organized', value: '12', icon: Calendar, color: 'text-blue-400' },
-        { label: 'Success Rate', value: '98%', icon: CheckCircle2, color: 'text-emerald-500' },
-        { label: 'Security Level', value: 'High', icon: Shield, color: 'text-primary' },
+        { label: 'Events Handled', value: '12', icon: Calendar, color: 'text-blue-400' },
+        { label: 'Check-in Rate', value: '98%', icon: CheckCircle2, color: 'text-emerald-500' },
+        { label: 'Safety Rating', value: 'High', icon: Shield, color: 'text-primary' },
     ];
 
     return (
@@ -49,45 +49,44 @@ const Profile = () => {
                 </div>
 
                 {/* Avatar + Action Row */}
-                <div className="flex items-end justify-between -mt-12 px-6 relative z-10">
+                <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between -mt-12 px-6 gap-6 sm:gap-3 relative z-10">
                     <div className="relative group">
-                        <div className="w-24 h-24 rounded-3xl bg-zinc-900 border-4 border-background flex items-center justify-center text-4xl font-black overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] ring-1 ring-white/10 group-hover:ring-primary/30 transition-all duration-500">
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-zinc-900 border-4 border-background flex items-center justify-center text-4xl font-black overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] ring-1 ring-white/10 group-hover:ring-primary/30 transition-all duration-500">
                             {user?.avatar ? (
                                 <img src={user.avatar} alt="" className="w-full h-full object-cover" />
                             ) : (
                                 <span className="text-gradient-gold-soft italic font-serif">{user.name[0]}</span>
                             )}
                         </div>
-                        <button className="absolute -bottom-1 -right-1 p-2 rounded-xl bg-primary text-background shadow-glow hover:scale-110 transition-transform active:scale-95">
-                            <Camera size={14} />
+                        <button className="absolute -bottom-1 -right-1 p-2.5 rounded-xl bg-primary text-background shadow-glow hover:scale-110 transition-transform active:scale-95">
+                            <Camera size={16} />
                         </button>
                     </div>
 
-                    <div className="flex gap-3 mb-2">
+                    <div className="flex gap-3 w-full sm:w-auto">
                         <Button
                             variant={isEditing ? 'ghost-luxury' : 'luxury'}
                             onClick={() => setIsEditing(!isEditing)}
-                            className="h-10 px-6 rounded-xl text-[11px] font-black uppercase tracking-widest whitespace-nowrap"
+                            className="flex-1 sm:flex-none h-11 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap"
                         >
                             <Edit3 size={12} className="mr-2" />
-                            {isEditing ? 'Cancel Mapping' : 'Edit Identity'}
+                            {isEditing ? 'Cancel Edit' : 'Edit Profile'}
                         </Button>
                         <Button
                             variant="danger"
                             onClick={handleLogout}
-                            className="h-10 px-6 rounded-xl text-[11px] font-black uppercase tracking-widest"
+                            className="flex-1 sm:flex-none h-11 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest"
                         >
                             <LogOut size={12} className="mr-2" />
-                            Logoff
+                            Logout
                         </Button>
                     </div>
                 </div>
 
-                {/* Identity Header */}
-                <div className="px-2 space-y-1">
-                    <div className="flex items-center gap-3">
+                <div className="px-2 space-y-1 text-center sm:text-left">
+                    <div className="flex flex-col sm:flex-row items-center gap-3">
                         <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
-                            {user.name} <span className="text-gradient-gold-soft italic font-serif">IDENTITY.</span>
+                            {user.name} <span className="text-gradient-gold-soft italic font-serif">PROFILE.</span>
                         </h2>
                         <Badge variant="primary" className="px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg bg-primary/10 border-primary/20">
                             {user.role}
@@ -96,34 +95,36 @@ const Profile = () => {
                     <p className="text-xs font-bold text-white/90 uppercase tracking-[0.3em]">{user.email}</p>
                 </div>
 
-                {/* Intelligence Metrics */}
-                <div className="grid grid-cols-3 gap-4">
+                {/* Quick Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {stats.map((stat, i) => (
-                        <div key={i} className="app-card p-5 flex flex-col items-center justify-center text-center group bg-surface/40 hover:border-primary/20 transition-all duration-500">
-                            <stat.icon size={16} className={`${stat.color} opacity-40 mb-3 group-hover:opacity-100 transition-opacity`} />
-                            <p className="text-xl font-black text-white tracking-tighter group-hover:text-primary transition-colors">{stat.value}</p>
-                            <p className="text-[9px] text-white/90 font-black uppercase tracking-[0.2em] mt-1">{stat.label}</p>
+                        <div key={i} className="app-card p-4 sm:p-5 flex flex-row sm:flex-col items-center justify-between sm:justify-center gap-4 sm:gap-0 group bg-surface/40 hover:border-primary/20 transition-all duration-500">
+                            <stat.icon size={16} className={`${stat.color} opacity-40 sm:mb-3 group-hover:opacity-100 transition-opacity`} />
+                            <div className="text-right sm:text-center flex-1 sm:flex-none">
+                                <p className="text-xl font-black text-white tracking-tighter group-hover:text-primary transition-colors">{stat.value}</p>
+                                <p className="text-[9px] text-white/90 font-black uppercase tracking-[0.2em] mt-1">{stat.label}</p>
+                            </div>
                         </div>
                     ))}
                 </div>
 
-                {/* Registry Core */}
+                {/* Account Details */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-3 px-1">
                         <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-glow" />
-                        <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em]">Registry Mapping</h3>
+                        <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em]">My Information</h3>
                     </div>
                     <div className="app-card p-8 bg-surface/40 backdrop-blur-3xl relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-                        <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); toast.success('Parameters Synchronized'); setIsEditing(false); }}>
+                        <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); toast.success('Profile Updated'); setIsEditing(false); }}>
                             {[
-                                { label: 'Signature', value: user.name, icon: User },
-                                { label: 'Digital Denomination', value: user.email, icon: Mail },
-                                { label: 'Mandate', value: user.role, icon: Shield, disabled: true },
-                                { label: 'Temporal Basin', value: 'GMT +5:30 (IST)', icon: Globe },
+                                { label: 'Full Name', value: user.name, icon: User },
+                                { label: 'Email Address', value: user.email, icon: Mail },
+                                { label: 'Current Role', value: user.role, icon: Shield, disabled: true },
+                                { label: 'Timezone', value: 'GMT +5:30 (IST)', icon: Globe },
                             ].map((field, i) => (
                                 <div key={i} className="group flex items-center gap-5">
-                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/[0.03] border border-white/5 group-hover:border-primary/20 group-hover:bg-primary/5 transition-all duration-500">
+                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/[0.03] border border-white/5 group-hover:border-primary/20 group-hover:bg-primary/5 transition-all duration-500 shrink-0">
                                         <field.icon size={18} className="text-white/80 group-hover:text-primary transition-colors" />
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -142,7 +143,7 @@ const Profile = () => {
                             {isEditing && (
                                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="pt-4">
                                     <Button type="submit" variant="luxury" className="w-full h-14 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] shadow-glow">
-                                        Save Protocol Changes
+                                        Save Profile Changes
                                     </Button>
                                 </motion.div>
                             )}
@@ -150,17 +151,17 @@ const Profile = () => {
                     </div>
                 </div>
 
-                {/* Security Protocols */}
+                {/* Account Security */}
                 <div className="space-y-4">
                     <div className="flex items-center gap-3 px-1">
                         <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
-                        <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em]">Security Protocols</h3>
+                        <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em]">Account Security</h3>
                     </div>
                     <div className="app-card divide-y divide-white/5 bg-surface/40">
                         {[
-                            { icon: Lock, label: 'Encryption Key', sub: 'Last rotated 14 days ago', color: 'text-rose-500', iconBg: 'bg-rose-500/5', action: 'Rotate' },
-                            { icon: Bell, label: 'Broadcast Channels', sub: 'Critical mission updates active', color: 'text-blue-400', iconBg: 'bg-blue-400/5', action: 'Calibrate' },
-                            { icon: Shield, label: 'Validation Level', sub: 'L5 System Synchronization Active', color: 'text-primary', iconBg: 'bg-primary/5', action: null },
+                            { icon: Lock, label: 'Password / Pin', sub: 'Last changed 2 weeks ago', color: 'text-rose-500', iconBg: 'bg-rose-500/5', action: 'Change' },
+                            { icon: Bell, label: 'Alert Settings', sub: 'Critical notifications active', color: 'text-blue-400', iconBg: 'bg-blue-400/5', action: 'Manage' },
+                            { icon: Shield, label: 'Account Status', sub: 'Fully Verified & Active', color: 'text-primary', iconBg: 'bg-primary/5', action: null },
                         ].map((item, i) => (
                             <div key={i} className="flex items-center justify-between px-6 py-5 group hover:bg-white/[0.02] transition-colors">
                                 <div className="flex items-center gap-4">

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, MapPin, ArrowRight, Plus, Filter, Search, MoreHorizontal, Bell, CheckCircle2, XCircle, MessageSquare, Zap, Target, Activity, X, Users, Scan, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight, Plus, Filter, Search, MoreHorizontal, Bell, CheckCircle2, XCircle, MessageSquare, Zap, Target, Activity, X, Users, Scan, Trash2, AlertCircle, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { Card, Button, Badge, Input } from '../components/ui/Components';
+import { Card, Button, Badge, Input, Tooltip } from '../components/ui/Components';
 import AICommandCenter from '../components/AICommandCenter';
 import { socket, joinRoom } from '../lib/socket';
 
@@ -62,6 +63,7 @@ const LiveCountdown = ({ targetDate, eventName }) => {
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -80,6 +82,7 @@ const Dashboard = () => {
     const [missionTab, setMissionTab] = useState('feed'); // 'feed' or 'assign'
     const [missionForm, setMissionForm] = useState({ title: '', description: '', priority: 'Medium', assignedTo: '' });
     const [logisticsTab, setLogisticsTab] = useState('resources'); // 'resources' or 'missions'
+    const [liveAlerts, setLiveAlerts] = useState([]);
 
     useEffect(() => {
         fetchEvents();
@@ -112,6 +115,10 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
+        // Essential: Join the general manager room immediately so we don't miss global signals
+        joinRoom('manager_room');
+        if (user?.role === 'Admin') joinRoom('admin_room');
+
         // Global listener for attendance updates
         socket.on('attendance_update', (data) => {
             setEvents(prev => prev.map(ev =>
@@ -120,7 +127,6 @@ const Dashboard = () => {
                     : ev
             ));
 
-            // If the logistics modal is open for this event, update it too
             setSelectedEvent(prev => (prev && prev._id === data.eventId)
                 ? { ...prev, actual_audience: data.totalCheckedIn }
                 : prev
@@ -137,12 +143,67 @@ const Dashboard = () => {
             setEventTasks(prev => prev.map(t => t._id === data.taskId ? { ...t, status: data.status, updatedAt: data.updatedAt } : t));
         });
 
+        // Use a unified handler for all emergency entry points
+        const triggerEmergencyUI = (data) => {
+            // Sound Alarm
+            try {
+                const alarm = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                alarm.volume = 0.5;
+                alarm.play().catch(e => console.log('Audio playback prevented:', e));
+            } catch (e) {
+                console.error('Sound system error:', e);
+            }
+
+            setLiveAlerts(prev => {
+                // Deduplication check
+                if (prev.some(a => a.timestamp === data.timestamp && a.volunteerName === data.volunteerName)) {
+                    return prev;
+                }
+                return [{ id: Date.now(), ...data, type: 'EMERGENCY' }, ...prev];
+            });
+
+            toast.error(`EMERGENCY: ${data.volunteerName} at ${data.eventName}`, {
+                duration: 15000,
+                position: 'top-right',
+                icon: '🚨',
+                style: {
+                    background: '#7f1d1d',
+                    color: '#fff',
+                    fontWeight: 'black',
+                    border: '2px solid #ef4444',
+                    padding: '16px'
+                }
+            });
+        };
+
+        socket.on('volunteer_emergency', (data) => {
+            console.log('SIGNAL: Emergency via Manager Room');
+            triggerEmergencyUI(data);
+        });
+
+        socket.on('emergency_alert', (data) => {
+            console.log('SIGNAL: Emergency via Event Room');
+            triggerEmergencyUI(data);
+        });
+
+        socket.on('broadcast_emergency', (data) => {
+            console.log('SIGNAL: Emergency via Global Broadcast');
+            // Only show to managers/admins if it's a broadcast
+            if (user?.role === 'Admin' || user?.role === 'EventManager') {
+                triggerEmergencyUI(data);
+            }
+        });
+
         return () => {
             socket.off('attendance_update');
             socket.off('task_assigned');
             socket.off('task_update');
+            socket.off('volunteer_emergency');
+            socket.off('emergency_alert');
+            socket.off('broadcast_emergency');
         };
-    }, []);
+    }, [user, selectedEvent]);
+
 
     const getEventStatus = (event) => {
         const now = new Date();
@@ -353,6 +414,40 @@ const Dashboard = () => {
                     <LiveCountdown targetDate={nextEvent.start_date} eventName={nextEvent.event_name} />
                 )}
 
+                {/* Live SOS Emergency Alerts */}
+                {liveAlerts.length > 0 && (
+                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+                        <div className="flex items-center justify-between px-1">
+                            <h3 className="text-[11px] text-rose-500 font-black animate-pulse flex items-center gap-2">
+                                <ShieldAlert size={14} /> LIVE EMERGENCY LOG
+                            </h3>
+                            <button onClick={() => setLiveAlerts([])} className="text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors">Clear All</button>
+                        </div>
+                        <div className="space-y-3">
+                            {liveAlerts.map(alert => (
+                                <div key={alert.id} className="app-card p-5 flex items-center justify-between gap-4 bg-rose-500/10 border-rose-500/30 group animate-in slide-in-from-right duration-500">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-[1.25rem] bg-rose-500/20 border border-rose-500/40 flex items-center justify-center font-black text-rose-500 shadow-[0_0_20px_rgba(239,68,68,0.2)] animate-pulse">
+                                            <AlertCircle size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-black text-white uppercase tracking-widest leading-none mb-2">{alert.volunteerName}</p>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Badge variant="danger" className="text-[9px] px-2 py-0.5 rounded-lg uppercase font-black italic">SOS SIGNAL</Badge>
+                                                <span className="text-[10px] text-white/70 font-bold uppercase tracking-tight">{alert.eventName} • {alert.location}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1">{new Date(alert.timestamp).toLocaleTimeString()}</p>
+                                        <button onClick={() => setLiveAlerts(prev => prev.filter(a => a.id !== alert.id))} className="text-[9px] font-black text-rose-400/60 hover:text-rose-400 uppercase tracking-widest transition-colors">Dismiss</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Hiring Requests Notification Strip */}
                 {pendingRequests.length > 0 && (
                     <motion.div
@@ -495,15 +590,23 @@ const Dashboard = () => {
                                                     Action Required
                                                 </div>
                                                 <div className="flex items-center justify-center gap-3 w-full sm:w-auto">
-                                                    <button onClick={() => handleShowAiAssistant(event._id)} className="flex-1 sm:flex-none h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary hover:text-background transition-all shadow-glow group/ai">
-                                                        <Zap size={16} fill="currentColor" className="group-hover/ai:scale-120 transition-transform" />
-                                                    </button>
-                                                    <button onClick={() => navigate('/volunteer')} className="flex-1 sm:flex-none h-12 px-6 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/90 hover:bg-white/10 hover:border-white/20 transition-all font-black text-[10px] uppercase tracking-widest gap-2 shadow-glow focus:outline-none focus:ring-1 focus:ring-primary/40">
-                                                        <Scan size={14} /> Scan
-                                                    </button>
-                                                    <button onClick={() => handleShowLogistics(event)} className="btn-icon-luxury shadow-glow group/btn">
-                                                        <ArrowRight size={22} className="group-hover/btn:translate-x-1 transition-transform" />
-                                                    </button>
+                                                    <Tooltip text="AI Logistics Assistant">
+                                                        <button onClick={() => handleShowAiAssistant(event._id)} className="flex-1 sm:flex-none h-12 w-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary hover:text-background transition-all shadow-glow group/ai">
+                                                            <Zap size={16} fill="currentColor" className="group-hover/ai:scale-120 transition-transform " />
+                                                        </button>
+                                                    </Tooltip>
+
+                                                    <Tooltip text="Open Volunteer Portal">
+                                                        <button onClick={() => navigate('/volunteer')} className="flex-1 sm:flex-none h-12 px-6 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/90 hover:bg-white/10 hover:border-white/20 transition-all font-black text-[10px] uppercase tracking-widest gap-2 shadow-glow focus:outline-none focus:ring-1 focus:ring-primary/40">
+                                                            <Scan size={14} /> Scan
+                                                        </button>
+                                                    </Tooltip>
+
+                                                    <Tooltip text="Manage Logistics & Assign Task">
+                                                        <button onClick={() => handleShowLogistics(event)} className="btn-icon-luxury shadow-glow group/btn">
+                                                            <ArrowRight size={22} className="group-hover/btn:translate-x-1 transition-transform" />
+                                                        </button>
+                                                    </Tooltip>
                                                     <div className="relative flex-shrink-0">
                                                         <button
                                                             onClick={() => setActiveMenu(activeMenu === event._id ? null : event._id)}
