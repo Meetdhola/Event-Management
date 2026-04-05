@@ -58,9 +58,9 @@ const Profile = () => {
                                 <span className="text-gradient-gold-soft italic font-serif">{user.name[0]}</span>
                             )}
                         </div>
-                        <button className="absolute -bottom-1 -right-1 p-2.5 rounded-xl bg-primary text-background shadow-glow hover:scale-110 transition-transform active:scale-95">
+                        {/* <button className="absolute -bottom-1 -right-1 p-2.5 rounded-xl bg-primary text-background shadow-glow hover:scale-110 transition-transform active:scale-95">
                             <Camera size={16} />
-                        </button>
+                        </button> */}
                     </div>
 
                     <div className="flex gap-3 w-full sm:w-auto">
@@ -152,7 +152,7 @@ const Profile = () => {
                 </div>
 
                 {/* Account Security */}
-                <div className="space-y-4">
+                {/* <div className="space-y-4">
                     <div className="flex items-center gap-3 px-1">
                         <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
                         <h3 className="text-[11px] font-black text-white uppercase tracking-[0.4em]">Account Security</h3>
@@ -181,7 +181,7 @@ const Profile = () => {
                             </div>
                         ))}
                     </div>
-                </div>
+                </div> */}
 
             </div>
         </div>
