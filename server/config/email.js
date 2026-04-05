@@ -14,9 +14,13 @@ const sendEmail = async (options) => {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
             },
-            connectionTimeout: 15000, // 15 seconds
+            tls: {
+                rejectUnauthorized: false // Helps in cloud environments like Render
+            },
+            connectionTimeout: 15000,
             greetingTimeout: 10000,
-            socketTimeout: 20000
+            socketTimeout: 20000,
+            family: 4 // Force IPv4 to avoid IPv6 routing issues on Render
         });
     } else {
         // Fallback to dynamic Ethereal test account

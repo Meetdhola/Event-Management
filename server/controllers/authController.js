@@ -42,10 +42,11 @@ const sendOTP = async (req, res) => {
 
         res.status(200).json({ message: 'OTP sent to your email' });
     } catch (error) {
-        console.error(error);
+        console.error("FULL OTP ERROR:", error);
         res.status(500).json({
-            message: 'Server failed to deliver OTP. Please verify your SMTP settings in .env.',
-            error: error.message
+            message: 'Server failed to deliver OTP. Check the console for detailed SMTP logs.',
+            error: error.message,
+            code: error.code || 'UNKNOWN_ERROR'
         });
     }
 };
