@@ -1,6 +1,6 @@
 const express = require('express');
 // const colors = require('colors');
-const dotenv = require('dotenv').config({ path: '/Users/meetdhola/Downloads/Event Management/server/.env' });
+const dotenv = require('dotenv').config();
 const { errorHandler } = require('./middleware/errorMiddleware'); // Need to create this or use simple one
 const connectDB = require('./config/db');
 const cors = require('cors');

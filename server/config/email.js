@@ -4,6 +4,7 @@ const sendEmail = async (options) => {
     let transporter;
 
     if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        console.log(`Using SMTP configuration: ${process.env.EMAIL_SERVICE || 'gmail'} for ${process.env.EMAIL_USER}`);
         // Use provided credentials
         transporter = nodemailer.createTransport({
             service: process.env.EMAIL_SERVICE || 'gmail',
