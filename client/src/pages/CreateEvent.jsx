@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -34,11 +34,12 @@ const CreateEvent = () => {
         start_date: '',
         end_date: '',
         expected_audience: '',
+        budget_planned: '',
         image: ''
     });
     const navigate = useNavigate();
 
-    const { event_name, event_type, description, venue, start_date, end_date, expected_audience, image } = formData;
+    const { event_name, event_type, description, venue, start_date, end_date, expected_audience, budget_planned, image } = formData;
 
     const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -95,7 +96,7 @@ const CreateEvent = () => {
                         <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
                             create <span className="text-gradient-gold-soft italic font-serif">EVENT.</span>
                         </h1>
-                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Fill in the details to host your next event • Secured</p>
+                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Fill in the details to host your next event â€¢ Secured</p>
                     </div>
                     <Link to="/dashboard" className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-primary/20 hover:text-primary transition-all group">
                         <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
@@ -231,6 +232,16 @@ const CreateEvent = () => {
                                         onChange={onChange}
                                         required
                                         placeholder="Ex: 500"
+                                        className="h-14 rounded-2xl"
+                                    />
+                                    <Input
+                                        label="Planned Budget (INR)"
+                                        type="number"
+                                        name="budget_planned"
+                                        icon={Zap}
+                                        value={budget_planned}
+                                        onChange={onChange}
+                                        placeholder="Ex: 250000"
                                         className="h-14 rounded-2xl"
                                     />
                                 </div>

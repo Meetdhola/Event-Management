@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom';
 import {
     Bot,
     Send,
@@ -15,12 +16,49 @@ import { toast } from 'react-hot-toast';
 import { Button } from './ui/Components';
 
 const AICommandCenter = ({ eventId }) => {
+    const location = useLocation();
     const [messages, setMessages] = useState([
         { role: 'assistant', text: "Systems online. I'm your AI Logistics Assistant. How can I optimize your event today?" }
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [availableEvents, setAvailableEvents] = useState([]);
+    const [resolvedEventId, setResolvedEventId] = useState(eventId || null);
     const scrollRef = useRef(null);
+
+    useEffect(() => {
+        const incomingEventId = eventId || location.state?.eventId || null;
+        setResolvedEventId(incomingEventId);
+    }, [eventId, location.state]);
+
+    useEffect(() => {
+        const bootstrapEvents = async () => {
+            try {
+                const res = await axios.get('/events');
+                const rows = Array.isArray(res.data) ? res.data : [];
+                setAvailableEvents(rows);
+
+                if (!rows.length) return;
+
+                const currentId = eventId || location.state?.eventId || null;
+                if (currentId && rows.some((e) => e._id === currentId)) {
+                    setResolvedEventId(currentId);
+                    return;
+                }
+
+                const now = Date.now();
+                const upcoming = rows
+                    .filter((e) => new Date(e.end_date).getTime() >= now)
+                    .sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
+                const fallback = upcoming[0] || rows[0];
+                setResolvedEventId(fallback?._id || null);
+            } catch (error) {
+                console.error('Error loading AI event context:', error);
+            }
+        };
+
+        bootstrapEvents();
+    }, [eventId, location.state]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -32,13 +70,21 @@ const AICommandCenter = ({ eventId }) => {
         e.preventDefault();
         if (!input.trim()) return;
 
+        if (!resolvedEventId) {
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                text: 'Please select an event first so I can plan logistics for the correct event.'
+            }]);
+            return;
+        }
+
         const userMsg = input;
         setInput('');
         setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
         setLoading(true);
 
         try {
-            const res = await axios.post('/ai/command', { command: userMsg, eventId });
+            const res = await axios.post('/ai/command', { command: userMsg, eventId: resolvedEventId });
             setMessages(prev => [...prev, {
                 role: 'assistant',
                 text: res.data.message,
@@ -46,7 +92,8 @@ const AICommandCenter = ({ eventId }) => {
                 data: res.data.data
             }]);
         } catch (error) {
-            setMessages(prev => [...prev, { role: 'assistant', text: "Error processing command. Please try again." }]);
+            const backendMessage = error?.response?.data?.error || error?.response?.data?.message;
+            setMessages(prev => [...prev, { role: 'assistant', text: backendMessage || "Error processing command. Please try again." }]);
         } finally {
             setLoading(false);
         }
@@ -56,10 +103,30 @@ const AICommandCenter = ({ eventId }) => {
         const msg = messages[msgIndex];
         setLoading(true);
         try {
+            if (msg.action === 'GENERATE_REPORT') {
+                if (!resolvedEventId) {
+                    toast.error('Select an event before generating report');
+                    return;
+                }
+
+                const pdfRes = await axios.post('/ai/report/pdf', { eventId: resolvedEventId }, { responseType: 'blob' });
+                const blob = new Blob([pdfRes.data], { type: 'application/pdf' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `event-analytics-${resolvedEventId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                toast.success('Analytics PDF downloaded');
+                return;
+            }
+
             const res = await axios.post('/ai/execute', {
                 action: msg.action,
                 data: msg.data,
-                eventId
+                eventId: resolvedEventId
             });
             toast.success(res.data.message);
             setMessages(prev => [...prev, { role: 'assistant', text: `Optimization applied successfully: ${res.data.message}` }]);
@@ -67,7 +134,8 @@ const AICommandCenter = ({ eventId }) => {
                 window.dispatchEvent(new CustomEvent('logisticsUpdate'));
             }
         } catch (error) {
-            toast.error('Failed to apply optimization');
+            const backendMessage = error?.response?.data?.error || error?.response?.data?.message;
+            toast.error(backendMessage || 'Failed to apply optimization');
         } finally {
             setLoading(false);
         }
@@ -89,6 +157,18 @@ const AICommandCenter = ({ eventId }) => {
             );
             case 'BUDGET_SUMMARY': return <span className="flex items-center gap-1 text-[11px] font-bold text-green-500 uppercase"><TrendingUp size={10} /> Financial Insight</span>;
             case 'READINESS_UPDATE': return <span className="flex items-center gap-1 text-[11px] font-bold text-blue-500 uppercase"><Shield size={10} /> Security Verified</span>;
+            case 'GENERATE_REPORT': return (
+                <div className="flex flex-col gap-3">
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-cyan-400 uppercase"><TrendingUp size={10} /> Analytics Report Ready</span>
+                    <Button
+                        onClick={() => handleExecute(index)}
+                        variant="luxury"
+                        className="w-full h-10 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-cyan-500/20"
+                    >
+                        Download PDF Report
+                    </Button>
+                </div>
+            );
             default: return null;
         }
     }
@@ -168,6 +248,23 @@ const AICommandCenter = ({ eventId }) => {
 
             {/* Input Portal */}
             <div className="p-6 bg-zinc-950/40 border-t border-white/5">
+                {availableEvents.length > 0 && (
+                    <div className="mb-4">
+                        <select
+                            value={resolvedEventId || ''}
+                            onChange={(e) => setResolvedEventId(e.target.value || null)}
+                            className="w-full bg-white/[0.02] border border-white/10 rounded-xl py-3 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-white focus:outline-none focus:border-primary/30"
+                        >
+                            {!resolvedEventId && <option value="">Select Event Context</option>}
+                            {availableEvents.map((ev) => (
+                                <option key={ev._id} value={ev._id}>
+                                    {ev.event_name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
                 <form onSubmit={handleSend} className="relative group/form">
                     <input
                         type="text"
@@ -190,7 +287,7 @@ const AICommandCenter = ({ eventId }) => {
                 </form>
 
                 <div className="mt-5 flex gap-4 overflow-x-auto pb-2 no-scrollbar px-1">
-                    {['status overview', 'security check', 'budget report'].map(suggestion => (
+                    {['status overview', 'security check', 'budget report', 'generate analytics report'].map(suggestion => (
                         <button
                             key={suggestion}
                             type="button"

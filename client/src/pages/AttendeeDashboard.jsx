@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -17,7 +17,8 @@ import {
     Filter,
     Compass,
     Sparkles,
-    CheckCircle2
+    CheckCircle2,
+    Bot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge, Card, Button, Input } from '../components/ui/Components';
@@ -94,6 +95,10 @@ const AttendeeDashboard = () => {
     const [showReportModal, setShowReportModal] = useState(false);
     const [isReporting, setIsReporting] = useState(false);
     const [reportForm, setReportForm] = useState({ location: '', status: 'Normal', message: '' });
+    const [aiQuestion, setAiQuestion] = useState('');
+    const [aiAnswer, setAiAnswer] = useState('');
+    const [aiLoading, setAiLoading] = useState(false);
+    const [showAiWidget, setShowAiWidget] = useState(false);
 
     const upcomingTickets = tickets.filter(t => new Date(t.event_id?.start_date) > new Date()).sort((a,b) => new Date(a.event_id?.start_date) - new Date(b.event_id?.start_date));
     const nextTicket = upcomingTickets.length > 0 ? upcomingTickets[0] : null;
@@ -112,7 +117,7 @@ const AttendeeDashboard = () => {
             const handleUpdate = (newReport) => {
                 setCrowdReports(prev => [newReport, ...prev].slice(0, 20));
                 toast(`New Crowd Alert: ${newReport.location} is ${newReport.status}`, {
-                    icon: '🚨',
+                    icon: 'ðŸš¨',
                     style: {
                         borderRadius: '1rem',
                         background: '#09090b',
@@ -231,6 +236,24 @@ const AttendeeDashboard = () => {
         return isUpcoming && matchesSearch;
     });
 
+    const handleAskAnything = async (e) => {
+        e.preventDefault();
+        const question = aiQuestion.trim();
+        if (!question) return;
+
+        setAiLoading(true);
+        try {
+            const chatbotBaseUrl = import.meta.env.VITE_CHATBOT_API_URL || 'http://localhost:5000';
+            const res = await axios.post(`${chatbotBaseUrl}/api/chat`, { question });
+            setAiAnswer(res.data?.answer || "I don't have that information");
+            setAiQuestion('');
+        } catch (error) {
+            setAiAnswer('Unable to reach AI assistant right now.');
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-[calc(100vh-80px)] bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -263,7 +286,7 @@ const AttendeeDashboard = () => {
                         <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
                             aura <span className="text-gradient-gold-soft italic font-serif">LOUNGE.</span>
                         </h1>
-                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Authorized elite entry • Guest Active</p>
+                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Authorized elite entry â€¢ Guest Active</p>
                     </div>
                 </div>
 
@@ -383,7 +406,7 @@ const AttendeeDashboard = () => {
                                                             {ticket.attendees?.[0]?.name}
                                                             {ticket.attendees?.length > 1 && ` + ${ticket.attendees.length - 1} OTHERS`}
                                                         </span>
-                                                        <span className="hidden sm:block text-white/30">•</span>
+                                                        <span className="hidden sm:block text-white/30">â€¢</span>
                                                         <span className="text-[10px] text-white/70 font-bold tracking-widest">
                                                             ENTRY CONFIRMED
                                                         </span>
@@ -509,7 +532,7 @@ const AttendeeDashboard = () => {
                                     <button onClick={() => setSelectedTicket(null)} className="absolute top-8 right-8 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/80 hover:text-white transition-all"><X size={20} /></button>
 
                                     <div className="mt-4 mb-4 text-center">
-                                        <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-4">Entry Verified • Level 1 Access</div>
+                                        <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-4">Entry Verified â€¢ Level 1 Access</div>
                                         <h2 className="text-2xl font-serif text-white tracking-widest uppercase italic leading-tight">{selectedTicket.event_id?.event_name}</h2>
                                         
                                         <div className="flex items-center justify-center gap-3 mt-6 text-[10px] font-black text-white/60 uppercase tracking-widest bg-white/5 py-3 px-6 rounded-2xl border border-white/5">
@@ -772,6 +795,62 @@ const AttendeeDashboard = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                <div className="fixed bottom-6 right-4 sm:right-8 z-[80]">
+                    <AnimatePresence>
+                        {showAiWidget && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 12, scale: 0.96 }}
+                                className="w-[92vw] max-w-md mb-3 app-card p-5 border border-white/10 rounded-2xl bg-zinc-950/95 backdrop-blur-xl space-y-4 shadow-2xl"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-[11px] font-black text-white/90 uppercase tracking-[0.4em]">Attendee AI</h2>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAiWidget(false)}
+                                        className="text-white/60 hover:text-white transition-colors"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleAskAnything} className="flex items-center gap-3">
+                                    <input
+                                        type="text"
+                                        value={aiQuestion}
+                                        onChange={(e) => setAiQuestion(e.target.value)}
+                                        placeholder="ASK ANYTHING HERE"
+                                        className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl py-3 px-4 text-[11px] font-black uppercase tracking-widest text-white placeholder:text-white/70 focus:outline-none focus:border-primary/40 transition-all"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        disabled={aiLoading || !aiQuestion.trim()}
+                                        variant="luxury"
+                                        className="h-11 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                                    >
+                                        {aiLoading ? 'Asking...' : 'Ask'}
+                                    </Button>
+                                </form>
+                                {aiAnswer && (
+                                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 text-[11px] text-white/90 leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">
+                                        {aiAnswer}
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowAiWidget((prev) => !prev)}
+                        className="h-14 px-4 rounded-2xl bg-primary text-background shadow-[0_10px_30px_rgba(212,175,55,0.35)] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
+                        aria-label="Toggle attendee AI chatbot"
+                    >
+                        <Bot size={20} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">AI Chatbot</span>
+                    </button>
+                </div>
             </div>
         </div>
     );

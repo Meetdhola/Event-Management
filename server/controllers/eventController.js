@@ -1,4 +1,4 @@
-const Event = require('../models/Event');
+﻿const Event = require('../models/Event');
 
 // @desc    Get all events
 // @route   GET /api/events
@@ -58,6 +58,7 @@ const createEvent = async (req, res) => {
             start_date,
             end_date,
             expected_audience,
+            budget_planned,
             image
         } = req.body;
 
@@ -73,6 +74,9 @@ const createEvent = async (req, res) => {
             start_date,
             end_date,
             expected_audience,
+            budget: {
+                planned: Number(budget_planned) || 0
+            },
             image,
             event_manager_id: req.user.id
         });
@@ -107,6 +111,7 @@ const updateEvent = async (req, res) => {
             start_date,
             end_date,
             expected_audience,
+            budget_planned,
             image,
             status
         } = req.body;
@@ -121,6 +126,10 @@ const updateEvent = async (req, res) => {
                 start_date,
                 end_date,
                 expected_audience,
+                budget: {
+                    ...(event.budget || {}),
+                    planned: Number(budget_planned) || 0
+                },
                 image,
                 status
             },
