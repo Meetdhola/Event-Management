@@ -1,31 +1,5 @@
-# Environment Variables
-.env
-.env.local
-.env.development
-.env.production
-
-# Node Modules
-node_modules/
-npm-debug.log
-yarn-error.log
-
-# Build Outputs
-dist/
-build/
-.next/
-out/
-
-# OS Files
-.DS_Store
-Thumbs.db
-
-# IDE Files
-.vscode/
-.idea/
-
-# Testing
-coverage/
-
-# Log Files
-logs
-*.log
+venv/ 
+__pycache__/ 
+*.pyc 
+node_modules/ 
+.env 
