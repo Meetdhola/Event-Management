@@ -66,6 +66,18 @@ const createEvent = async (req, res) => {
             return res.status(400).json({ message: 'Please add all required fields' });
         }
 
+        const now = new Date();
+        const start = new Date(start_date);
+        const end = new Date(end_date);
+
+        if (start < now) {
+            return res.status(400).json({ message: 'Commencement cannot be before current date/time' });
+        }
+
+        if (end <= start) {
+            return res.status(400).json({ message: 'Conclusion must be after commencement' });
+        }
+
         const event = await Event.create({
             event_name,
             event_type,
@@ -115,6 +127,14 @@ const updateEvent = async (req, res) => {
             image,
             status
         } = req.body;
+
+        if (start_date && end_date) {
+            const start = new Date(start_date);
+            const end = new Date(end_date);
+            if (end <= start) {
+                return res.status(400).json({ message: 'Conclusion must be after commencement' });
+            }
+        }
 
         event = await Event.findByIdAndUpdate(
             req.params.id,

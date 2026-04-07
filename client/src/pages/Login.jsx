@@ -63,7 +63,7 @@ const Login = () => {
                             <Input
                                 id="email"
                                 type="email"
-                                label="Digital Denomination"
+                                label="Email"
                                 placeholder="registry@elite.managed"
                                 icon={Mail}
                                 value={formData.email}
@@ -74,7 +74,7 @@ const Login = () => {
                             <Input
                                 id="password"
                                 type="password"
-                                label="Access Code"
+                                label="Password"
                                 placeholder="••••••••"
                                 icon={Lock}
                                 value={formData.password}
@@ -96,10 +96,10 @@ const Login = () => {
 
                     <div className="mt-12 text-center pt-8 border-t border-white/5">
                         <p className="text-[11px] uppercase tracking-[0.3em] text-white/90 font-bold">
-                            New to the Infrastructure?
+                            New to website
                         </p>
                         <Link to="/register" className="group inline-flex items-center gap-2 mt-4 text-[11px] uppercase tracking-[0.4em] font-black text-primary hover:text-white transition-all">
-                            Request Registry <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                            Sign up <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                         </Link>
                     </div>
                 </div>

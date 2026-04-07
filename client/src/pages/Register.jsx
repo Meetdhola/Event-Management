@@ -8,6 +8,9 @@ import { cn } from '../lib/utils';
 import { toast } from 'react-hot-toast';
 
 const Register = () => {
+    const phoneRegex = /^(?:\+91\s?)?\d{10}$/;
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         name: '',
@@ -62,8 +65,22 @@ const Register = () => {
             return;
         }
 
+        const normalizedPhone = formData.phone.trim();
+        if (!phoneRegex.test(normalizedPhone)) {
+            toast.error('Phone must be exactly 10 digits (optional +91 prefix)');
+            return;
+        }
+
+        if (!passwordRegex.test(formData.password)) {
+            toast.error('Password must be at least 8 chars with 1 uppercase, 1 number, and 1 special character');
+            return;
+        }
+
         setLoading(true);
-        const success = await register(formData);
+        const success = await register({
+            ...formData,
+            phone: normalizedPhone
+        });
         setLoading(false);
         if (success) navigate('/dashboard');
     };
@@ -161,7 +178,7 @@ const Register = () => {
                                             className="w-full h-16 text-xs font-black uppercase tracking-[0.4em] rounded-2xl"
                                             onClick={() => formData.role ? setStep(2) : toast.error("Selective mandate required")}
                                         >
-                                            Next Protocol
+                                            Next
                                         </Button>
                                     </div>
                                 </motion.div>
@@ -184,7 +201,7 @@ const Register = () => {
                                         <Input
                                             id="email"
                                             type="email"
-                                            label="Digital Denomination"
+                                            label="Email"
                                             placeholder="registry@elite.global"
                                             icon={Mail}
                                             value={formData.email}
@@ -201,7 +218,7 @@ const Register = () => {
                                                 className="w-full h-16 text-xs font-black uppercase tracking-[0.4em] rounded-2xl"
                                                 isLoading={loading}
                                             >
-                                                Request Authorization
+                                                Request OTP
                                             </Button>
                                         ) : (
                                             <motion.div
@@ -211,7 +228,7 @@ const Register = () => {
                                             >
                                                 <Input
                                                     id="otp"
-                                                    label="6-Digit Handshake Code"
+                                                    label="6-Digit Code"
                                                     placeholder="••••••"
                                                     value={formData.otp}
                                                     onChange={(e) => setFormData({ ...formData, otp: e.target.value })}
@@ -224,7 +241,7 @@ const Register = () => {
                                                         Revise Role
                                                     </button>
                                                     <Button type="submit" variant="primary" className="flex-[2] h-14 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em]">
-                                                        Verify Handshake
+                                                        Verify OTP
                                                     </Button>
                                                 </div>
                                             </motion.div>
@@ -244,7 +261,7 @@ const Register = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <Input
                                             id="name"
-                                            label="Full Signature"
+                                            label="Full Name"
                                             placeholder="Ex: Alexander Hunt"
                                             icon={User}
                                             value={formData.name}
@@ -254,18 +271,19 @@ const Register = () => {
                                         />
                                         <Input
                                             id="phone"
-                                            label="Global Reach"
-                                            placeholder="+1 234 567 890"
+                                            label="Phone number"
+                                            placeholder="1234567890"
                                             icon={Phone}
                                             value={formData.phone}
                                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                            required
                                             className="h-14 rounded-2xl"
                                         />
                                     </div>
                                     <Input
                                         id="password"
                                         type="password"
-                                        label="Secure Secret Key"
+                                        label="Password"
                                         placeholder="••••••••"
                                         icon={Lock}
                                         value={formData.password}
@@ -289,9 +307,9 @@ const Register = () => {
                 </div>
 
                 <div className="mt-12 text-center pb-12">
-                    <p className="text-[11px] uppercase tracking-[0.4em] text-white/90 font-bold">Already part of the network?</p>
+                    <p className="text-[11px] uppercase tracking-[0.4em] text-white/90 font-bold">Already part of the Website?</p>
                     <Link to="/login" className="group inline-flex items-center gap-2 mt-4 text-[11px] uppercase tracking-[0.5em] font-black text-primary hover:text-white transition-all py-2">
-                        Sign In to Terminal <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                        Sign In <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
                     </Link>
                 </div>
             </motion.div>

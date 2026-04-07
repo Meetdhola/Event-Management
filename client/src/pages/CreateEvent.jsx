@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -12,6 +12,7 @@ import {
     Loader2,
     Users,
     Layers,
+    ChevronDown,
     ChevronRight,
     Check,
     Zap,
@@ -23,9 +24,14 @@ import { Button, Input, Card, Badge } from '../components/ui/Components';
 import LogisticsCart from '../components/LogisticsCart';
 
 const CreateEvent = () => {
+    const eventTypeOptions = ['Concert', 'Fest', 'Conference', 'Exhibition', 'Workshop', 'Seminar', 'Meetup', 'Sports', 'Other'];
+
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [createdEventId, setCreatedEventId] = useState(null);
+    const [customEventType, setCustomEventType] = useState('');
+    const [isEventTypeOpen, setIsEventTypeOpen] = useState(false);
+    const eventTypeMenuRef = useRef(null);
     const [formData, setFormData] = useState({
         event_name: '',
         event_type: 'Concert',
@@ -39,15 +45,35 @@ const CreateEvent = () => {
     });
     const navigate = useNavigate();
 
+    const getLocalDateTimeMin = () => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        return now.toISOString().slice(0, 16);
+    };
+
+    const [minDateTime] = useState(getLocalDateTimeMin());
+
+    useEffect(() => {
+        const handleOutsideClick = (event) => {
+            if (eventTypeMenuRef.current && !eventTypeMenuRef.current.contains(event.target)) {
+                setIsEventTypeOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleOutsideClick);
+        return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }, []);
+
     const { event_name, event_type, description, venue, start_date, end_date, expected_audience, budget_planned, image } = formData;
 
     const onChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
 
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
+        const selectedEventType = event_type === 'Other' ? customEventType.trim() : event_type;
 
         if (step === 1) {
-            if (!event_name || !event_type || !description) {
+            if (!event_name || !selectedEventType || !description) {
                 toast.error('Please fill all basic details');
                 return;
             }
@@ -60,6 +86,21 @@ const CreateEvent = () => {
                 toast.error('Please fill all logistics details');
                 return;
             }
+
+            const now = new Date();
+            const start = new Date(start_date);
+            const end = new Date(end_date);
+
+            if (start < now) {
+                toast.error('Commencement cannot be before current date/time');
+                return;
+            }
+
+            if (end <= start) {
+                toast.error('Conclusion must be after commencement');
+                return;
+            }
+
             setStep(3);
             return;
         }
@@ -67,7 +108,11 @@ const CreateEvent = () => {
         setLoading(true);
 
         try {
-            const res = await axios.post('/events', formData);
+            const payload = {
+                ...formData,
+                event_type: selectedEventType
+            };
+            const res = await axios.post('/events', payload);
             setCreatedEventId(res.data._id);
             setStep(4);
             toast.success('Event details saved! Now plan your logistics.');
@@ -86,6 +131,26 @@ const CreateEvent = () => {
         { id: 4, label: 'Resources' }
     ];
 
+    const handleImageFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select a valid image file');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result === 'string') {
+                setFormData((prev) => ({ ...prev, image: reader.result }));
+                toast.success('Image loaded from local file');
+            }
+        };
+        reader.onerror = () => toast.error('Failed to read selected image');
+        reader.readAsDataURL(file);
+    };
+
     return (
         <div className="main-content">
             <div className={`mx-auto px-4 pt-4 pb-32 sm:pb-4 space-y-6 transition-all duration-500 ${step === 4 ? 'max-w-7xl' : 'max-w-2xl'}`}>
@@ -96,7 +161,7 @@ const CreateEvent = () => {
                         <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
                             create <span className="text-gradient-gold-soft italic font-serif">EVENT.</span>
                         </h1>
-                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Fill in the details to host your next event â€¢ Secured</p>
+                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Fill in the details to host your next event | Secured</p>
                     </div>
                     <Link to="/dashboard" className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-primary/20 hover:text-primary transition-all group">
                         <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
@@ -156,22 +221,65 @@ const CreateEvent = () => {
                                         />
                                         <div className="space-y-2 group">
                                             <label className="text-[11px] uppercase tracking-[0.3em] font-bold text-muted ml-1 group-focus-within:text-primary transition-colors">Event Type <span className="text-red-500 ml-1 text-xs leading-none">*</span></label>
-                                            <div className="relative">
-                                                <Layers size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors" />
-                                                <select
-                                                    name="event_type"
-                                                    value={event_type}
-                                                    onChange={onChange}
-                                                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-[11px] font-bold text-white focus:outline-none focus:border-primary/40 transition-all appearance-none"
+                                            <div ref={eventTypeMenuRef} className="relative">
+                                                <Layers size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-muted transition-colors pointer-events-none z-10" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsEventTypeOpen((prev) => !prev)}
+                                                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-12 text-[11px] font-bold text-white text-left focus:outline-none focus:border-primary/40 transition-all"
                                                 >
-                                                    <option value="Concert" className="bg-background">Concert</option>
-                                                    <option value="Fest" className="bg-background">Fest</option>
-                                                    <option value="Conference" className="bg-background">Conference</option>
-                                                    <option value="Exhibition" className="bg-background">Exhibition</option>
-                                                </select>
+                                                    {event_type}
+                                                </button>
+                                                <ChevronDown
+                                                    size={16}
+                                                    className={`absolute right-5 top-1/2 -translate-y-1/2 text-white/70 transition-transform ${isEventTypeOpen ? 'rotate-180' : ''}`}
+                                                />
+
+                                                <AnimatePresence>
+                                                    {isEventTypeOpen && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                                                            className="absolute z-[80] mt-2 w-full rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden"
+                                                        >
+                                                            <div className="max-h-64 overflow-y-auto no-scrollbar">
+                                                                {eventTypeOptions.map((typeOption) => (
+                                                                    <button
+                                                                        key={typeOption}
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setFormData((prev) => ({ ...prev, event_type: typeOption }));
+                                                                            if (typeOption !== 'Other') setCustomEventType('');
+                                                                            setIsEventTypeOpen(false);
+                                                                        }}
+                                                                        className={`w-full px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.2em] transition-colors ${event_type === typeOption
+                                                                            ? 'bg-primary/15 text-primary'
+                                                                            : 'text-white hover:bg-white/[0.05]'
+                                                                            }`}
+                                                                    >
+                                                                        {typeOption}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </div>
                                         </div>
                                     </div>
+                                    {event_type === 'Other' && (
+                                        <Input
+                                            label="Specify Event Type"
+                                            name="custom_event_type"
+                                            icon={Layers}
+                                            value={customEventType}
+                                            onChange={(e) => setCustomEventType(e.target.value)}
+                                            required
+                                            placeholder="Ex: Charity Gala"
+                                            className="h-14 rounded-2xl"
+                                        />
+                                    )}
                                     <div className="space-y-2">
                                         <label className="text-[11px] uppercase tracking-[0.3em] font-bold text-muted ml-1">Event Description <span className="text-red-500 ml-1 text-xs leading-none">*</span></label>
                                         <textarea
@@ -210,6 +318,7 @@ const CreateEvent = () => {
                                             name="start_date"
                                             value={start_date}
                                             onChange={onChange}
+                                            min={minDateTime}
                                             required
                                             className="h-14 rounded-2xl inline-block"
                                         />
@@ -219,6 +328,7 @@ const CreateEvent = () => {
                                             name="end_date"
                                             value={end_date}
                                             onChange={onChange}
+                                            min={start_date || minDateTime}
                                             required
                                             className="h-14 rounded-2xl"
                                         />
@@ -254,7 +364,7 @@ const CreateEvent = () => {
                                         <p className="text-[11px] font-black text-white/70 uppercase tracking-[0.4em]">Event Image</p>
                                     </div>
                                     <Input
-                                        label="Image URL"
+                                        label="Image URL (Optional)"
                                         type="url"
                                         name="image"
                                         icon={ImageIcon}
@@ -263,6 +373,18 @@ const CreateEvent = () => {
                                         placeholder="https://images.unsplash.com/..."
                                         className="h-14 rounded-2xl"
                                     />
+                                    <div className="space-y-2">
+                                        <label className="text-[11px] uppercase tracking-[0.3em] font-bold text-muted ml-1">Or Upload from Device</label>
+                                        <div className="relative">
+                                            <ImageIcon size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-muted" />
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleImageFileChange}
+                                                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-[11px] font-bold text-white file:mr-4 file:rounded-xl file:border-0 file:bg-primary/15 file:px-3 file:py-1.5 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:text-primary"
+                                            />
+                                        </div>
+                                    </div>
                                     <div className="relative w-full aspect-video rounded-[2.5rem] border-2 border-dashed border-white/5 bg-white/[0.02] flex flex-col items-center justify-center text-muted overflow-hidden group hover:border-primary/20 transition-all">
                                         {image ? (
                                             <motion.img

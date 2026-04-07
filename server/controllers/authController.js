@@ -4,6 +4,9 @@ const User = require('../models/User');
 const Verification = require('../models/Verification');
 const sendEmail = require('../config/email');
 
+const phoneRegex = /^(?:\+91\s?)?\d{10}$/;
+const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
 // Generate JWT
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -20,6 +23,14 @@ const sendOTP = async (req, res) => {
 
         if (!email) {
             return res.status(400).json({ message: 'Please provide an email' });
+        }
+
+        const userExists = await User.findOne({ email });
+        if (userExists) {
+            if (userExists.status === 'blocked') {
+                return res.status(403).json({ message: 'Access Denied: This email protocol has been blacklisted by system administration.' });
+            }
+            return res.status(409).json({ message: 'User already exists. Please sign in instead.' });
         }
 
         // Generate 6-digit OTP
@@ -62,6 +73,15 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Please add all fields including OTP' });
         }
 
+        const normalizedPhone = String(phone || '').trim();
+        if (!phoneRegex.test(normalizedPhone)) {
+            return res.status(400).json({ message: 'Phone must be exactly 10 digits (optional +91 prefix)' });
+        }
+
+        if (!passwordRegex.test(password)) {
+            return res.status(400).json({ message: 'Password must be at least 8 chars with 1 uppercase, 1 number, and 1 special character' });
+        }
+
         // Verify OTP
         const verification = await Verification.findOne({ email, otp });
         if (!verification) {
@@ -84,7 +104,7 @@ const registerUser = async (req, res) => {
             email,
             password_hash: password,
             role,
-            phone,
+            phone: normalizedPhone,
             is_approved: ['Attendee', 'Client'].includes(role), // Attendees and Clients approved by default
         });
 

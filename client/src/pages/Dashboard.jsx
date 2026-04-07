@@ -173,7 +173,7 @@ const Dashboard = () => {
             toast.error(`EMERGENCY: ${data.volunteerName} at ${data.eventName}`, {
                 duration: 15000,
                 position: 'top-right',
-                icon: 'ðŸš¨',
+                icon: '!',
                 style: {
                     background: '#7f1d1d',
                     color: '#fff',
@@ -303,7 +303,7 @@ const Dashboard = () => {
         try {
             await axios.delete(`/volunteer/tasks/${taskId}`);
             toast.success('Mission successfully rescinded.', {
-                icon: 'ðŸ—‘ï¸',
+                icon: 'X',
                 style: { background: '#ef4444', color: '#fff', fontWeight: 'bold' }
             });
             fetchEventTasks(selectedEvent._id);
@@ -428,7 +428,7 @@ const Dashboard = () => {
                         <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
                             event <span className="text-gradient-gold-soft italic font-serif">DASHBOARD.</span>
                         </h1>
-                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Manage your events and logistics â€¢ Secure Access</p>
+                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Manage your events and logistics | Secure Access</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <button onClick={() => navigate('/chat')} className="w-11 h-11 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-center text-white/70 hover:text-primary transition-all shadow-xl group">
@@ -465,7 +465,7 @@ const Dashboard = () => {
                                             <p className="text-sm font-black text-white uppercase tracking-widest leading-none mb-2">{alert.volunteerName}</p>
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <Badge variant="danger" className="text-[9px] px-2 py-0.5 rounded-lg uppercase font-black italic">SOS SIGNAL</Badge>
-                                                <span className="text-[10px] text-white/70 font-bold uppercase tracking-tight">{alert.eventName} â€¢ {alert.location}</span>
+                                                <span className="text-[10px] text-white/70 font-bold uppercase tracking-tight">{alert.eventName} | {alert.location}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -738,7 +738,7 @@ const Dashboard = () => {
                                                                         <div className="flex justify-between items-center">
                                                                             <div>
                                                                                 <p className="text-xs font-black text-white uppercase tracking-widest group-hover:text-primary transition-colors">{resource.name}</p>
-                                                                                <p className="text-[11px] text-white/90 font-bold uppercase mt-1.5 tracking-tight">â‚¹{resource.base_price.toLocaleString()} â€¢ {resource.unit}</p>
+                                                                                <p className="text-[11px] text-white/90 font-bold uppercase mt-1.5 tracking-tight">INR {resource.base_price.toLocaleString()} | {resource.unit}</p>
                                                                             </div>
                                                                             <div className="flex items-center gap-2">
                                                                                 {(() => {
@@ -785,7 +785,7 @@ const Dashboard = () => {
                                                             <div className="p-8 rounded-[2rem] bg-zinc-900 border border-blue-500/10 shadow-[0_30px_60px_rgba(0,0,0,0.5)] relative overflow-hidden group">
                                                                 <div className="absolute inset-0 bg-blue-500/2 blur-[80px] group-hover:bg-blue-500/5 transition-all" />
                                                                 <p className="text-[9px] text-white/90 font-black uppercase tracking-[0.5em] mb-4">Total Estimated Cost</p>
-                                                                <p className="text-4xl font-serif text-white italic tracking-widest">â‚¹{selectedEvent.logistics_cart?.reduce((acc, curr) => acc + (curr.resource?.base_price || 0) * curr.quantity, 0).toLocaleString()}</p>
+                                                                <p className="text-4xl font-serif text-white italic tracking-widest">INR {selectedEvent.logistics_cart?.reduce((acc, curr) => acc + (curr.resource?.base_price || 0) * curr.quantity, 0).toLocaleString()}</p>
                                                                 <div className="mt-6 flex gap-2">
                                                                     {[1, 2, 3, 4].map(i => <div key={i} className="h-0.5 flex-1 bg-blue-500/20 rounded-full" />)}
                                                                 </div>
@@ -807,7 +807,7 @@ const Dashboard = () => {
                                                                         <div key={i} className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 flex justify-between items-center group hover:bg-white/[0.04] transition-all">
                                                                             <div>
                                                                                 <p className="text-xs font-black text-white uppercase tracking-widest">{item.resource?.name || 'Processing...'}</p>
-                                                                                <p className="text-[10px] text-white/50 font-black uppercase mt-1 tracking-widest">QTY: {item.quantity} â€¢ {item.resource?.category}</p>
+                                                                                <p className="text-[10px] text-white/50 font-black uppercase mt-1 tracking-widest">QTY: {item.quantity} | {item.resource?.category}</p>
                                                                             </div>
                                                                             <button onClick={() => handleAddResourceToEvent((item.resource?._id || item.resource), 0)} className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center"><X size={14} /></button>
                                                                         </div>
@@ -879,7 +879,7 @@ const Dashboard = () => {
                                                             <div key={task._id} className="p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all group overflow-hidden relative">
                                                                 <div className="flex justify-between items-start mb-6">
                                                                     <Badge variant={task.status === 'Completed' ? 'success' : task.priority === 'Critical' ? 'error' : 'warning'} className="uppercase text-[9px] font-black tracking-widest py-1 px-3 rounded-xl italic">
-                                                                        {task.status} â€¢ {task.priority}
+                                                                        {task.status} | {task.priority}
                                                                     </Badge>
                                                                     <div className="flex items-center gap-3">
                                                                         <div className={`w-2 h-2 rounded-full ${task.status === 'Completed' ? 'bg-emerald-500 shadow-glow' : 'bg-amber-500 animate-pulse'}`} />
@@ -970,7 +970,7 @@ const Dashboard = () => {
                                     <div className="px-8 py-4 rounded-2xl bg-primary/5 border border-primary/10 w-full sm:w-auto">
                                         <p className="text-[9px] text-primary font-black uppercase tracking-[0.5em] mb-1.5 opacity-60">Total Budget</p>
                                         <p className="text-2xl font-serif text-white tracking-widest italic leading-none">
-                                            â‚¹{selectedEvent.logistics_cart?.reduce((acc, curr) => acc + (curr.resource?.base_price || 0) * curr.quantity, 0).toLocaleString()}
+                                            INR {selectedEvent.logistics_cart?.reduce((acc, curr) => acc + (curr.resource?.base_price || 0) * curr.quantity, 0).toLocaleString()}
                                         </p>
                                     </div>
                                     <button onClick={() => setShowLogistics(false)} className="btn-luxury w-full sm:w-auto px-12 italic">

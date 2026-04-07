@@ -6,7 +6,6 @@ import {
     Minus,
     AlertTriangle,
     CheckCircle,
-    Zap,
     Scale,
     Trash2
 } from 'lucide-react';
@@ -172,15 +171,6 @@ const LogisticsCart = ({ eventId, onUpdate }) => {
                                 <div className="text-right">
                                     <span className="text-4xl md:text-5xl font-serif font-black text-white italic tracking-tighter drop-shadow-[0_0_20px_rgba(255,255,255,0.2)]">₹{calculateTotal().toLocaleString()}</span>
                                 </div>
-                            </div>
-
-                            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-start gap-4">
-                                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
-                                    <Zap size={14} className="text-primary" />
-                                </div>
-                                <p className="text-[11px] text-primary/80 font-medium leading-relaxed uppercase tracking-widest pt-1">
-                                    AI Suggests: Cost parameters optimized within 15% of market index.
-                                </p>
                             </div>
 
                             <Button 

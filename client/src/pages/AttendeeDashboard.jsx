@@ -121,7 +121,7 @@ const AttendeeDashboard = () => {
             const handleUpdate = (newReport) => {
                 setCrowdReports(prev => [newReport, ...prev].slice(0, 20));
                 toast(`New Crowd Alert: ${newReport.location} is ${newReport.status}`, {
-                    icon: 'ðŸš¨',
+                    icon: '!',
                     style: {
                         borderRadius: '1rem',
                         background: '#09090b',
@@ -331,7 +331,7 @@ const AttendeeDashboard = () => {
                         <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
                             aura <span className="text-gradient-gold-soft italic font-serif">LOUNGE.</span>
                         </h1>
-                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Authorized elite entry â€¢ Guest Active</p>
+                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Authorized elite entry | Guest Active</p>
                     </div>
                 </div>
 
@@ -451,7 +451,7 @@ const AttendeeDashboard = () => {
                                                             {ticket.attendees?.[0]?.name}
                                                             {ticket.attendees?.length > 1 && ` + ${ticket.attendees.length - 1} OTHERS`}
                                                         </span>
-                                                        <span className="hidden sm:block text-white/30">â€¢</span>
+                                                        <span className="hidden sm:block text-white/30">|</span>
                                                         <span className="text-[10px] text-white/70 font-bold tracking-widest">
                                                             ENTRY CONFIRMED
                                                         </span>
@@ -634,7 +634,7 @@ const AttendeeDashboard = () => {
                                     <button onClick={() => setSelectedTicket(null)} className="absolute top-8 right-8 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/80 hover:text-white transition-all"><X size={20} /></button>
 
                                     <div className="mt-4 mb-4 text-center">
-                                        <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-4">Entry Verified â€¢ Level 1 Access</div>
+                                        <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-4">Entry Verified | Level 1 Access</div>
                                         <h2 className="text-2xl font-serif text-white tracking-widest uppercase italic leading-tight">{selectedTicket.event_id?.event_name}</h2>
                                         
                                         <div className="flex items-center justify-center gap-3 mt-6 text-[10px] font-black text-white/60 uppercase tracking-widest bg-white/5 py-3 px-6 rounded-2xl border border-white/5">

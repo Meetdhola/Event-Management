@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
-import { Activity, TrendingUp } from 'lucide-react';
+import { Activity, ChevronDown, TrendingUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 
@@ -13,6 +13,8 @@ const ManagerAnalytics = () => {
     const [analytics, setAnalytics] = useState(null);
     const [loading, setLoading] = useState(true);
     const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+    const [isEventMenuOpen, setIsEventMenuOpen] = useState(false);
+    const eventMenuRef = useRef(null);
 
     const selectedEvent = useMemo(
         () => events.find((e) => e._id === selectedEventId) || null,
@@ -36,6 +38,17 @@ const ManagerAnalytics = () => {
         };
 
         bootstrap();
+    }, []);
+
+    useEffect(() => {
+        const handleOutsideClick = (event) => {
+            if (eventMenuRef.current && !eventMenuRef.current.contains(event.target)) {
+                setIsEventMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleOutsideClick);
+        return () => document.removeEventListener('mousedown', handleOutsideClick);
     }, []);
 
     useEffect(() => {
@@ -123,17 +136,58 @@ const ManagerAnalytics = () => {
                     <h1 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tight">
                         Event <span className="text-gradient-gold-soft italic font-serif">Analytics</span>
                     </h1>
-                    <div className="w-full sm:w-auto min-w-[280px]">
-                        <select
-                            value={selectedEventId}
-                            onChange={(e) => setSelectedEventId(e.target.value)}
-                            className="w-full bg-white/[0.03] border border-white/10 rounded-xl py-3 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-white focus:outline-none focus:border-primary/30"
+                    <div ref={eventMenuRef} className="w-full sm:w-auto min-w-[280px] relative">
+                        <button
+                            type="button"
+                            onClick={() => setIsEventMenuOpen((prev) => !prev)}
+                            className="w-full bg-white/[0.03] border border-white/10 rounded-xl py-3 px-4 text-[11px] font-black uppercase tracking-[0.16em] text-white text-left focus:outline-none focus:border-primary/30"
                         >
-                            {events.length > 1 && <option value={ALL_EVENTS_VALUE}>ALL MANAGED EVENTS</option>}
-                            {events.map((ev) => (
-                                <option key={ev._id} value={ev._id}>{ev.event_name}</option>
-                            ))}
-                        </select>
+                            {selectedEventId === ALL_EVENTS_VALUE
+                                ? 'ALL MANAGED EVENTS'
+                                : (selectedEvent?.event_name || 'SELECT EVENT')}
+                        </button>
+                        <ChevronDown
+                            size={16}
+                            className={`absolute right-4 top-1/2 -translate-y-1/2 text-white/70 transition-transform ${isEventMenuOpen ? 'rotate-180' : ''}`}
+                        />
+
+                        {isEventMenuOpen && (
+                            <div className="absolute z-[90] mt-2 w-full rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden">
+                                <div className="max-h-64 overflow-y-auto no-scrollbar">
+                                    {events.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedEventId(ALL_EVENTS_VALUE);
+                                                setIsEventMenuOpen(false);
+                                            }}
+                                            className={`w-full px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.15em] transition-colors ${selectedEventId === ALL_EVENTS_VALUE
+                                                ? 'bg-primary/15 text-primary'
+                                                : 'text-white hover:bg-white/[0.05]'
+                                                }`}
+                                        >
+                                            ALL MANAGED EVENTS
+                                        </button>
+                                    )}
+                                    {events.map((ev) => (
+                                        <button
+                                            key={ev._id}
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedEventId(ev._id);
+                                                setIsEventMenuOpen(false);
+                                            }}
+                                            className={`w-full px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.15em] transition-colors ${selectedEventId === ev._id
+                                                ? 'bg-primary/15 text-primary'
+                                                : 'text-white hover:bg-white/[0.05]'
+                                                }`}
+                                        >
+                                            {ev.event_name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -143,7 +197,7 @@ const ManagerAnalytics = () => {
                         : 'You can switch between single-event view and all-managed-events view.'}
                 </p>
 
-                {!selectedEvent ? (
+                {!selectedEvent && selectedEventId !== ALL_EVENTS_VALUE ? (
                     <div className="py-20 text-center text-white/60 font-black uppercase tracking-widest text-xs app-card">No events available</div>
                 ) : loadingAnalytics ? (
                     <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem] opacity-40">

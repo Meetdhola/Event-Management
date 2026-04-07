@@ -32,7 +32,7 @@ const detectIntent = (command = '') => {
         return { type: 'budget' };
     }
 
-    if (cmd.includes('status') || cmd.includes('ready') || cmd.includes('progress') || cmd.includes('organize')) {
+    if (cmd.includes('status') || cmd.includes('ready') || cmd.includes('progress') || cmd.includes('organize') || cmd.includes('optimize') || cmd.includes('important') || cmd.includes('missing') || cmd.includes('remove') || cmd.includes('improve')) {
         return { type: 'readiness' };
     }
 
@@ -114,6 +114,84 @@ const buildReadinessSummary = (event) => {
     const score = Math.min(100, logisticsFactor + staffingFactor + statusFactor);
 
     return { score, covered, missing };
+};
+
+const getPriorityMatrixByEventType = (eventType = '') => {
+    const type = String(eventType || '').toLowerCase();
+    const baseCritical = ['Security', 'Logistics', 'Audio/Visual', 'Technical'];
+
+    if (type.includes('concert') || type.includes('fest') || type.includes('sports')) {
+        return {
+            critical: [...baseCritical, 'Food'],
+            medium: ['Decor']
+        };
+    }
+
+    if (type.includes('conference') || type.includes('seminar') || type.includes('workshop')) {
+        return {
+            critical: baseCritical,
+            medium: ['Food']
+        };
+    }
+
+    if (type.includes('exhibition')) {
+        return {
+            critical: [...baseCritical, 'Logistics'],
+            medium: ['Decor', 'Food']
+        };
+    }
+
+    return {
+        critical: [...baseCritical, 'Food'],
+        medium: ['Decor']
+    };
+};
+
+const buildPriorityOptimization = (event) => {
+    const categoriesInPlan = new Map();
+    for (const item of event.logistics_cart || []) {
+        const cat = item.resource?.category;
+        if (!cat) continue;
+        const prev = categoriesInPlan.get(cat) || 0;
+        categoriesInPlan.set(cat, prev + (item.quantity || 0));
+    }
+
+    const { critical, medium } = getPriorityMatrixByEventType(event.event_type);
+    const covered = Array.from(categoriesInPlan.keys());
+
+    const missingCritical = critical.filter((c) => !covered.includes(c));
+    const missingMedium = medium.filter((c) => !covered.includes(c));
+    const lowPriorityPresent = covered.filter((c) => !critical.includes(c) && !medium.includes(c));
+
+    const additionalGaps = [];
+    if (!event.expected_audience || Number(event.expected_audience) <= 0) {
+        additionalGaps.push('Expected audience missing (required for accurate capacity planning).');
+    }
+    if (!event.budget?.planned || Number(event.budget?.planned) <= 0) {
+        additionalGaps.push('Planned budget missing (required for budget-safe optimization).');
+    }
+    if (!Array.isArray(event.volunteers) || event.volunteers.length === 0) {
+        additionalGaps.push('No volunteers assigned (critical staffing risk).');
+    }
+    if (!Array.isArray(event.vendors) || event.vendors.length === 0) {
+        additionalGaps.push('No vendors linked (execution reliability risk).');
+    }
+
+    const addNow = [
+        ...missingCritical.map((c) => `${c} (critical)`),
+        ...missingMedium.map((c) => `${c} (supporting)`)
+    ];
+
+    const reduceOrRemove = lowPriorityPresent.map((c) => `${c} (lower priority for ${event.event_type || 'this event'})`);
+
+    return {
+        covered,
+        missingCritical,
+        missingMedium,
+        addNow,
+        reduceOrRemove,
+        additionalGaps
+    };
 };
 
 const toNumber = (value) => {
@@ -320,7 +398,7 @@ const buildEventAnalyticsReport = async (eventId, chartPaths = []) => {
 
     const recommendations = [
         expectedAudience && actualAudience ? `Increase confirmed attendance by ${(Math.max(0, expectedAudience - actualAudience)).toLocaleString()} to close the ${(attendanceGap * 100).toFixed(1)}% gap.` : 'Improve attendance tracking completeness to compute attendance-rate targets.',
-        budget ? `Set spend guardrails to keep utilization between 90%-110% of â‚¹${budget.toLocaleString()}.` : 'Capture planned budget in event setup to enable spend control analytics.',
+        budget ? `Set spend guardrails to keep utilization between 90%-110% of INR ${budget.toLocaleString()}.` : 'Capture planned budget in event setup to enable spend control analytics.',
         volunteerCount === 0 ? 'Assign at least 1 volunteer lead and 1 operations backup before event day.' : `Increase volunteer depth from ${volunteerCount} to reduce single-point operational dependency.`,
         vendorCount === 0 ? 'Onboard minimum 1 confirmed vendor per critical category (Food, AV, Technical).' : `Validate vendor SLAs for all ${vendorCount} onboarded vendors with fallback contacts.`,
         logisticsCount === 0 ? 'Finalize logistics cart with category coverage before publishing run-of-show.' : `Audit logistics cart (${logisticsCount} items) against expected audience capacity assumptions.`,
@@ -347,8 +425,8 @@ const buildEventAnalyticsReport = async (eventId, chartPaths = []) => {
         'Trends/anomalies: Insufficient data for time-series trend decomposition.',
         '',
         '## 4. Financial Analysis',
-        line('Budget', budget !== null ? `â‚¹${budget.toLocaleString()}` : 'Insufficient data for analysis'),
-        line('Estimated Spend', `â‚¹${estimatedSpend.toLocaleString()}`),
+        line('Budget', budget !== null ? `INR ${budget.toLocaleString()}` : 'Insufficient data for analysis'),
+        line('Estimated Spend', `INR ${estimatedSpend.toLocaleString()}`),
         line('Utilization Classification', budgetBand),
         `Efficiency interpretation: ${budgetBand === 'Optimal' ? 'Spending is within efficient operating range.' : budgetBand === 'Under-utilized' ? 'Potential underinvestment against planned demand.' : budgetBand === 'Overspending' ? 'Cost control risk; spending exceeds healthy envelope.' : 'Insufficient data for analysis'}`,
         'ROI: Insufficient data for analysis',
@@ -369,7 +447,7 @@ const buildEventAnalyticsReport = async (eventId, chartPaths = []) => {
         '',
         '## 7. Data-Driven Insights',
         `- Observation: Attendance rate is ${formatPercent(attendanceRate)}. Reason: actual (${actualAudience ?? 'N/A'}) vs expected (${expectedAudience ?? 'N/A'}). Impact: ${attendanceBand} demand realization impacts revenue/utilization outcomes.`,
-        `- Observation: Budget utilization is ${formatPercent(budgetUtilization)}. Reason: estimated spend â‚¹${estimatedSpend.toLocaleString()} against budget ${budget !== null ? `â‚¹${budget.toLocaleString()}` : 'N/A'}. Impact: ${budgetBand} financial performance profile.`,
+        `- Observation: Budget utilization is ${formatPercent(budgetUtilization)}. Reason: estimated spend INR ${estimatedSpend.toLocaleString()} against budget ${budget !== null ? `INR ${budget.toLocaleString()}` : 'N/A'}. Impact: ${budgetBand} financial performance profile.`,
         `- Observation: Logistics cart has ${logisticsCount} item(s). Reason: current configured plan depth. Impact: ${logisticsCount === 0 ? 'High planning risk before execution.' : 'Execution plan has baseline resource structure.'}`,
         '',
         '## 8. Recommendations',
@@ -467,17 +545,34 @@ const processCommand = async (req, res) => {
             const variance = ((total / baseline) * 100).toFixed(1);
 
             response = {
-                message: `Budget view: logistics total is â‚¹${total.toLocaleString()}. This is ${variance}% of your ${plannedBudget > 0 ? 'planned budget' : 'current baseline'}. ${plannedBudget > 0 && total > plannedBudget ? 'You are over budget.' : 'You are on track.'}`,
+                message: `Budget view: logistics total is INR ${total.toLocaleString()}. This is ${variance}% of your ${plannedBudget > 0 ? 'planned budget' : 'current baseline'}. ${plannedBudget > 0 && total > plannedBudget ? 'You are over budget.' : 'You are on track.'}`,
                 action: 'BUDGET_SUMMARY',
                 data: { total, variance, status: plannedBudget > 0 && total > plannedBudget ? 'OVERRUN' : 'ON_TRACK' }
             };
         } else if (intent.type === 'readiness') {
             const readiness = buildReadinessSummary(event);
+            const priorityPlan = buildPriorityOptimization(event);
+
+            const addLine = priorityPlan.addNow.length
+                ? priorityPlan.addNow.join(', ')
+                : 'None';
+            const removeLine = priorityPlan.reduceOrRemove.length
+                ? priorityPlan.reduceOrRemove.join(', ')
+                : 'None';
+            const extraGapsLine = priorityPlan.additionalGaps.length
+                ? priorityPlan.additionalGaps.join(' | ')
+                : 'None';
 
             response = {
-                message: `Readiness is ${readiness.score}%. Covered: ${readiness.covered.join(', ') || 'None'}. Missing: ${readiness.missing.join(', ') || 'None'}.`,
+                message: `Readiness is ${readiness.score}%. Covered: ${readiness.covered.join(', ') || 'None'}. Missing: ${readiness.missing.join(', ') || 'None'}. Prioritize adding: ${addLine}. Reduce/remove lower-priority items: ${removeLine}. Additional critical parameters missing: ${extraGapsLine}.`,
                 action: 'READINESS_UPDATE',
-                data: { score: readiness.score, missing: readiness.missing }
+                data: {
+                    score: readiness.score,
+                    missing: readiness.missing,
+                    important_to_add: priorityPlan.addNow,
+                    less_important_to_reduce: priorityPlan.reduceOrRemove,
+                    critical_parameter_gaps: priorityPlan.additionalGaps
+                }
             };
         } else if (cmd.includes('report') || cmd.includes('analytics') || cmd.includes('analysis') || cmd.includes('pdf')) {
             response = {

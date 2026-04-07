@@ -9,7 +9,8 @@ import {
     Zap,
     AlertCircle,
     TrendingUp,
-    Shield
+    Shield,
+    ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -24,7 +25,9 @@ const AICommandCenter = ({ eventId }) => {
     const [loading, setLoading] = useState(false);
     const [availableEvents, setAvailableEvents] = useState([]);
     const [resolvedEventId, setResolvedEventId] = useState(eventId || null);
+    const [isEventMenuOpen, setIsEventMenuOpen] = useState(false);
     const scrollRef = useRef(null);
+    const eventMenuRef = useRef(null);
 
     useEffect(() => {
         const incomingEventId = eventId || location.state?.eventId || null;
@@ -65,6 +68,17 @@ const AICommandCenter = ({ eventId }) => {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages]);
+
+    useEffect(() => {
+        const handleOutsideClick = (event) => {
+            if (eventMenuRef.current && !eventMenuRef.current.contains(event.target)) {
+                setIsEventMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleOutsideClick);
+        return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }, []);
 
     const handleSend = async (e) => {
         e.preventDefault();
@@ -135,8 +149,8 @@ const AICommandCenter = ({ eventId }) => {
                     </Button>
                 </div>
             );
-            case 'BUDGET_SUMMARY': return <span className="flex items-center gap-1 text-[11px] font-bold text-green-500 uppercase"><TrendingUp size={10} /> Financial Insight</span>;
-            case 'READINESS_UPDATE': return <span className="flex items-center gap-1 text-[11px] font-bold text-blue-500 uppercase"><Shield size={10} /> Security Verified</span>;
+            case 'BUDGET_SUMMARY': return <span className="flex items-center gap-1 text-[12px] font-bold text-green-500 uppercase"><TrendingUp size={10} /> Financial Insight</span>;
+            case 'READINESS_UPDATE': return <span className="flex items-center gap-1 text-[12px] font-bold text-blue-500 uppercase"><Shield size={10} /> Readiness Insight</span>;
             default: return null;
         }
     }
@@ -155,8 +169,8 @@ const AICommandCenter = ({ eventId }) => {
                         <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-4 border-[#0C0C0E] animate-pulse shadow-glow" />
                     </div>
                     <div>
-                        <h3 className="text-xs font-black text-white uppercase tracking-[0.3em]">Tactical Intelligence</h3>
-                        <div className="flex items-center gap-2 mt-1.5 font-mono text-[9px] text-white/80 uppercase tracking-widest font-black">
+                        <h3 className="text-sm font-black text-white uppercase tracking-[0.24em]">Tactical Intelligence</h3>
+                        <div className="flex items-center gap-2 mt-1.5 font-mono text-[10px] text-white/80 uppercase tracking-[0.18em] font-black">
                             <span className="flex items-center gap-1"><Terminal size={8} /> OS_v2.0.4</span>
                             <span className="w-1 h-1 rounded-full bg-white/10" />
                             <span className="text-primary italic">Neural_Link_Active</span>
@@ -179,7 +193,7 @@ const AICommandCenter = ({ eventId }) => {
                         className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                         <div className={`max-w-[85%] space-y-3`}>
-                            <div className={`p-5 rounded-[1.75rem] text-[13px] font-bold leading-relaxed shadow-glow ${m.role === 'user'
+                            <div className={`p-5 rounded-[1.75rem] text-[14px] font-bold leading-relaxed shadow-glow ${m.role === 'user'
                                 ? 'btn-prismatic text-primary rounded-tr-sm'
                                 : 'bg-white/[0.04] border border-white/5 text-white backdrop-blur-3xl rounded-tl-sm'
                                 }`}>
@@ -191,11 +205,11 @@ const AICommandCenter = ({ eventId }) => {
                                 )}
                             </div>
                             <div className="flex items-center gap-3 px-3">
-                                <span className="text-[9px] font-black text-white/70 uppercase tracking-[0.5em]">
+                                <span className="text-[10px] font-black text-white/70 uppercase tracking-[0.35em]">
                                     {m.role === 'assistant' ? 'HUB_INTEL' : 'OPS_MANAGER'}
                                 </span>
                                 <span className="w-1 h-1 rounded-full bg-white/10" />
-                                <span className="text-[9px] font-black text-white/70 uppercase tracking-widest">
+                                <span className="text-[10px] font-black text-white/70 uppercase tracking-widest">
                                     {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
@@ -217,38 +231,71 @@ const AICommandCenter = ({ eventId }) => {
             {/* Input Portal */}
             <div className="p-6 bg-zinc-950/40 border-t border-white/5">
                 {availableEvents.length > 0 && (
-                    <div className="mb-4">
-                        <select
-                            value={resolvedEventId || ''}
-                            onChange={(e) => setResolvedEventId(e.target.value || null)}
-                            className="w-full bg-white/[0.02] border border-white/10 rounded-xl py-3 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-white focus:outline-none focus:border-primary/30"
+                    <div ref={eventMenuRef} className="mb-4 relative">
+                        <button
+                            type="button"
+                            onClick={() => setIsEventMenuOpen((prev) => !prev)}
+                            className="w-full bg-white/[0.02] border border-white/10 rounded-xl py-3 px-4 text-[11px] font-black uppercase tracking-[0.16em] text-white text-left focus:outline-none focus:border-primary/30"
                         >
-                            {!resolvedEventId && <option value="">Select Event Context</option>}
-                            {availableEvents.map((ev) => (
-                                <option key={ev._id} value={ev._id}>
-                                    {ev.event_name}
-                                </option>
-                            ))}
-                        </select>
+                            {resolvedEventId
+                                ? (availableEvents.find((ev) => ev._id === resolvedEventId)?.event_name || 'Select Event Context')
+                                : 'Select Event Context'}
+                        </button>
+                        <ChevronDown
+                            size={16}
+                            className={`absolute right-4 top-1/2 -translate-y-1/2 text-white/70 transition-transform ${isEventMenuOpen ? 'rotate-180' : ''}`}
+                        />
+
+                        <AnimatePresence>
+                            {isEventMenuOpen && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                                    className="absolute z-[80] mt-2 w-full rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden"
+                                >
+                                    <div className="max-h-64 overflow-y-auto no-scrollbar">
+                                        {availableEvents.map((ev) => (
+                                            <button
+                                                key={ev._id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setResolvedEventId(ev._id);
+                                                    setIsEventMenuOpen(false);
+                                                }}
+                                                className={`w-full px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.15em] transition-colors ${resolvedEventId === ev._id
+                                                    ? 'bg-primary/15 text-primary'
+                                                    : 'text-white hover:bg-white/[0.05]'
+                                                    }`}
+                                            >
+                                                {ev.event_name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
                 )}
 
-                <form onSubmit={handleSend} className="relative group/form">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Enter mission parameter..."
-                        className="w-full bg-white/[0.02] border border-white/5 rounded-[1.5rem] py-5 pl-14 pr-16 text-white text-[9px] font-black uppercase tracking-[0.2em] placeholder:text-white/80 focus:outline-none focus:border-primary/20 transition-all font-mono"
-                    />
-                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-white/70 group-focus-within/form:text-primary transition-colors">
-                        <Terminal size={18} />
+                <form onSubmit={handleSend} className="flex items-center gap-3 group/form">
+                    <div className="relative flex-1">
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Enter mission parameter..."
+                            className="w-full bg-white/[0.02] border border-white/5 rounded-[1.5rem] py-5 pl-14 pr-6 text-white text-[12px] font-black uppercase tracking-[0.14em] placeholder:text-white/80 focus:outline-none focus:border-primary/20 transition-all font-mono"
+                        />
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-white/70 group-focus-within/form:text-primary transition-colors">
+                            <Terminal size={18} />
+                        </div>
                     </div>
                     <Button
                         type="submit"
                         disabled={loading || !input.trim()}
                         variant="prismatic"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-2xl flex items-center justify-center text-primary disabled:opacity-30 disabled:grayscale transition-all hover:scale-105 active:scale-95 shadow-glow"
+                        className="h-12 w-12 shrink-0 rounded-2xl flex items-center justify-center text-primary disabled:opacity-30 disabled:grayscale transition-all hover:scale-105 active:scale-95 shadow-glow"
                     >
                         <Send size={18} fill="currentColor" />
                     </Button>
@@ -260,7 +307,7 @@ const AICommandCenter = ({ eventId }) => {
                             key={suggestion}
                             type="button"
                             onClick={() => setInput(suggestion)}
-                            className="whitespace-nowrap px-4 py-2 rounded-xl border border-white/5 bg-white/[0.02] text-[9px] font-black text-white/80 hover:text-primary hover:border-primary/20 transition-all uppercase tracking-[0.3em] flex items-center gap-2 group/sug"
+                            className="whitespace-nowrap px-4 py-2 rounded-xl border border-white/5 bg-white/[0.02] text-[10px] font-black text-white/80 hover:text-primary hover:border-primary/20 transition-all uppercase tracking-[0.2em] flex items-center gap-2 group/sug"
                         >
                             <Sparkles size={10} className="text-primary/70 group-hover/sug:animate-spin" />
                             {suggestion}
