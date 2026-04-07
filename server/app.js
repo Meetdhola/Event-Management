@@ -50,6 +50,7 @@ app.use('/api/tickets', require('./routes/ticketRoutes'));
 app.use('/api/hiring', require('./routes/hiringRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/crowd', require('./routes/crowdRoutes'));
+app.use('/api/feedback', require('./routes/feedbackRoutes'));
 
 // Socket.io connection handler
 io.on('connection', (socket) => {

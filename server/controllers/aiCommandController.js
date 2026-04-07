@@ -1,6 +1,9 @@
 ﻿const Event = require('../models/Event');
 const Resource = require('../models/Resource');
 const Ticket = require('../models/Ticket');
+const Task = require('../models/Task');
+const Feedback = require('../models/Feedback');
+const CrowdReport = require('../models/CrowdReport');
 const PDFDocument = require('pdfkit');
 
 const STOP_WORDS = new Set([
@@ -129,6 +132,60 @@ const scoreToTen = (value) => {
 };
 
 const line = (label, value) => `- ${label}: ${value}`;
+
+const normalizeSentimentLabel = (emotion, score) => {
+    const label = String(emotion || '').toLowerCase();
+    if (label.includes('positive')) return 'positive';
+    if (label.includes('negative')) return 'negative';
+    if (label.includes('neutral')) return 'neutral';
+
+    const numeric = Number(score);
+    if (!Number.isFinite(numeric)) return 'neutral';
+    if (numeric > 0.15) return 'positive';
+    if (numeric < -0.15) return 'negative';
+    return 'neutral';
+};
+
+const getCrowdSeverity = (status) => {
+    const map = {
+        Clear: 1,
+        Normal: 2,
+        Crowded: 3,
+        'Very Crowded': 4
+    };
+    return map[status] || 0;
+};
+
+const sentimentToNumeric = (label) => {
+    if (label === 'positive') return 1;
+    if (label === 'negative') return -1;
+    return 0;
+};
+
+const pearsonCorrelation = (pairs) => {
+    if (!Array.isArray(pairs) || pairs.length < 2) return null;
+
+    const n = pairs.length;
+    let sumX = 0;
+    let sumY = 0;
+    let sumXY = 0;
+    let sumX2 = 0;
+    let sumY2 = 0;
+
+    for (const [x, y] of pairs) {
+        sumX += x;
+        sumY += y;
+        sumXY += x * y;
+        sumX2 += x * x;
+        sumY2 += y * y;
+    }
+
+    const numerator = (n * sumXY) - (sumX * sumY);
+    const denominator = Math.sqrt(((n * sumX2) - (sumX * sumX)) * ((n * sumY2) - (sumY * sumY)));
+
+    if (denominator === 0) return null;
+    return numerator / denominator;
+};
 
 const createPdfFromReport = (reportText) => {
     return new Promise((resolve, reject) => {
@@ -423,26 +480,11 @@ const processCommand = async (req, res) => {
                 data: { score: readiness.score, missing: readiness.missing }
             };
         } else if (cmd.includes('report') || cmd.includes('analytics') || cmd.includes('analysis') || cmd.includes('pdf')) {
-            const analytics = await buildEventAnalyticsReport(eventId, []);
-            if (analytics.error) {
-                return res.status(404).json({ message: analytics.error });
-            }
-            if (analytics.insufficient) {
-                response = {
-                    message: analytics.message,
-                    action: null,
-                    data: { missingFields: analytics.missingFields || [] }
-                };
-            } else {
-                response = {
-                    message: 'Event analytics report generated. Click below to download the PDF report.',
-                    action: 'GENERATE_REPORT',
-                    data: {
-                        eventId,
-                        missingFields: analytics.missingFields || []
-                    }
-                };
-            }
+            response = {
+                message: 'AI report generation has been removed. Use the Event Manager Analytics section for audience and budget comparison charts.',
+                action: null,
+                data: null
+            };
         } else {
             const ranked = availableResources
                 .map((resource) => ({
@@ -491,6 +533,208 @@ const processCommand = async (req, res) => {
         res.status(200).json(response);
     } catch (error) {
         res.status(500).json({ message: 'AI Command Center Error', error: error.message });
+    }
+};
+
+// @desc    Get manager event comparison analytics (Python-powered)
+// @route   GET /api/ai/comparison/:eventId
+// @access  Private/EventManager/Admin
+const getComparisonAnalytics = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const event = await Event.findById(eventId).populate('logistics_cart.resource');
+
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+
+        const isAdmin = req.user.role === 'Admin';
+        const currentUserId = String(req.user._id || req.user.id);
+        if (!isAdmin && String(event.event_manager_id) !== currentUserId) {
+            return res.status(403).json({ message: 'Not authorized for this event analytics' });
+        }
+
+        const expectedAudience = Number(event.expected_audience || 0);
+        const actualAudience = Number(event.actual_audience || 0);
+        const plannedBudget = Number(event.budget?.planned || 0);
+        const estimatedSpend = (event.logistics_cart || []).reduce(
+            (sum, item) => sum + ((item.resource?.base_price || 0) * (item.quantity || 0)),
+            0
+        );
+
+        const pythonBase = process.env.PYTHON_API_URL || 'http://localhost:5000';
+
+        let analytics;
+        try {
+            const pyRes = await fetch(`${pythonBase}/api/manager/comparison`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    expected_audience: expectedAudience,
+                    actual_audience: actualAudience,
+                    planned_budget: plannedBudget,
+                    estimated_spend: estimatedSpend
+                })
+            });
+
+            if (!pyRes.ok) {
+                throw new Error(`Python service failed with ${pyRes.status}`);
+            }
+
+            analytics = await pyRes.json();
+        } catch (pyError) {
+            const attendanceRate = expectedAudience > 0 ? actualAudience / expectedAudience : 0;
+            const budgetUtilization = plannedBudget > 0 ? estimatedSpend / plannedBudget : 0;
+
+            analytics = {
+                audience: {
+                    expected: expectedAudience,
+                    actual: actualAudience,
+                    gap: expectedAudience - actualAudience,
+                    attendance_rate: attendanceRate
+                },
+                budget: {
+                    planned: plannedBudget,
+                    estimated_spend: estimatedSpend,
+                    gap: plannedBudget - estimatedSpend,
+                    utilization: budgetUtilization
+                },
+                suggestions: [
+                    'Python analytics service unavailable. Showing local fallback metrics.',
+                    'Set PYTHON_API_URL and run app.py for Python-powered suggestions.'
+                ]
+            };
+        }
+
+        const tasks = await Task.find({ eventId: event._id }).lean();
+        const completedTasks = tasks.filter((t) => t.status === 'Completed');
+        const criticalTasks = tasks.filter((t) => t.priority === 'Critical');
+        const completedCriticalTasks = criticalTasks.filter((t) => t.status === 'Completed');
+
+        const avgCompletionMinutes = completedTasks.length > 0
+            ? completedTasks.reduce((sum, t) => {
+                const start = new Date(t.createdAt).getTime();
+                const end = new Date(t.updatedAt).getTime();
+                return sum + Math.max(0, (end - start) / (1000 * 60));
+            }, 0) / completedTasks.length
+            : 0;
+
+        const volunteerProductivity = {
+            tasks_assigned: tasks.length,
+            tasks_completed: completedTasks.length,
+            completion_rate: tasks.length > 0 ? completedTasks.length / tasks.length : 0,
+            avg_completion_minutes: avgCompletionMinutes,
+            critical_tasks_total: criticalTasks.length,
+            critical_tasks_completed: completedCriticalTasks.length,
+            critical_task_closure_rate: criticalTasks.length > 0 ? completedCriticalTasks.length / criticalTasks.length : 0
+        };
+
+        const feedbackRows = await Feedback.find({ event_id: event._id }).lean();
+        const crowdRows = await CrowdReport.find({ event_id: event._id }).lean();
+
+        const trendMap = new Map();
+        const zoneMap = new Map();
+        const statusCorrelationMap = new Map();
+        const correlationPairs = [];
+
+        const findNearestCrowd = (createdAt) => {
+            if (!crowdRows.length) return null;
+            const target = new Date(createdAt).getTime();
+            let best = null;
+            let minDiff = Infinity;
+
+            for (const c of crowdRows) {
+                const ts = new Date(c.created_at).getTime();
+                const diff = Math.abs(ts - target);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    best = c;
+                }
+            }
+
+            return best;
+        };
+
+        for (const fb of feedbackRows) {
+            const label = normalizeSentimentLabel(fb.emotion_ai, fb.sentiment_score_ai);
+            const day = new Date(fb.created_at).toISOString().slice(0, 10);
+            const hour = `${new Date(fb.created_at).getHours().toString().padStart(2, '0')}:00`;
+
+            if (!trendMap.has(day)) {
+                trendMap.set(day, { date: day, positive: 0, neutral: 0, negative: 0, total: 0 });
+            }
+            const trend = trendMap.get(day);
+            trend[label] += 1;
+            trend.total += 1;
+
+            const nearestCrowd = findNearestCrowd(fb.created_at);
+            const zone = nearestCrowd?.location || 'Unknown Zone';
+            const zoneKey = `${zone}__${hour}`;
+
+            if (!zoneMap.has(zoneKey)) {
+                zoneMap.set(zoneKey, {
+                    zone,
+                    hour,
+                    positive: 0,
+                    neutral: 0,
+                    negative: 0,
+                    total: 0
+                });
+            }
+            const zoneRow = zoneMap.get(zoneKey);
+            zoneRow[label] += 1;
+            zoneRow.total += 1;
+
+            if (nearestCrowd) {
+                const severity = getCrowdSeverity(nearestCrowd.status);
+                const sentimentValue = sentimentToNumeric(label);
+                if (severity > 0) {
+                    correlationPairs.push([severity, sentimentValue]);
+                    const status = nearestCrowd.status;
+                    if (!statusCorrelationMap.has(status)) {
+                        statusCorrelationMap.set(status, { status, sentiment_sum: 0, count: 0 });
+                    }
+                    const statusRow = statusCorrelationMap.get(status);
+                    statusRow.sentiment_sum += sentimentValue;
+                    statusRow.count += 1;
+                }
+            }
+        }
+
+        const sentimentTrend = Array.from(trendMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+        const sentimentByZoneTime = Array.from(zoneMap.values()).sort((a, b) => b.total - a.total);
+
+        const coefficient = pearsonCorrelation(correlationPairs);
+        const sentimentCrowdCorrelation = {
+            sample_size: correlationPairs.length,
+            coefficient,
+            interpretation: coefficient === null
+                ? 'Insufficient data'
+                : coefficient <= -0.4
+                    ? 'Higher crowd density is associated with more negative sentiment'
+                    : coefficient >= 0.4
+                        ? 'Higher crowd density is associated with more positive sentiment'
+                        : 'Weak or no clear relationship between crowd density and sentiment',
+            by_crowd_status: Array.from(statusCorrelationMap.values()).map((s) => ({
+                status: s.status,
+                avg_sentiment: s.count > 0 ? s.sentiment_sum / s.count : 0,
+                sample_size: s.count
+            }))
+        };
+
+        return res.status(200).json({
+            eventId,
+            eventName: event.event_name,
+            volunteer_productivity: volunteerProductivity,
+            feedback_sentiment_analytics: {
+                trend_over_time: sentimentTrend,
+                sentiment_by_zone_time: sentimentByZoneTime,
+                crowd_density_correlation: sentimentCrowdCorrelation
+            },
+            ...analytics
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Comparison analytics error', error: error.message });
     }
 };
 
@@ -598,6 +842,7 @@ module.exports = {
     processCommand,
     executeAction,
     analyzeSentiment,
+    getComparisonAnalytics,
     generateAnalyticsReport,
     downloadAnalyticsReportPdf
 };

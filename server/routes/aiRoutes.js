@@ -4,8 +4,7 @@ const {
 	processCommand,
 	executeAction,
 	analyzeSentiment,
-	generateAnalyticsReport,
-	downloadAnalyticsReportPdf
+	getComparisonAnalytics
 } = require('../controllers/aiCommandController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -13,8 +12,7 @@ router.use(protect);
 
 router.post('/command', authorize('EventManager', 'Admin'), processCommand);
 router.post('/execute', authorize('EventManager', 'Admin'), executeAction);
-router.post('/report', authorize('EventManager', 'Admin'), generateAnalyticsReport);
-router.post('/report/pdf', authorize('EventManager', 'Admin'), downloadAnalyticsReportPdf);
+router.get('/comparison/:eventId', authorize('EventManager', 'Admin'), getComparisonAnalytics);
 router.post('/sentiment', analyzeSentiment);
 
 module.exports = router;

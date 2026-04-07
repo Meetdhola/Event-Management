@@ -95,6 +95,9 @@ const AttendeeDashboard = () => {
     const [showReportModal, setShowReportModal] = useState(false);
     const [isReporting, setIsReporting] = useState(false);
     const [reportForm, setReportForm] = useState({ location: '', status: 'Normal', message: '' });
+    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+    const [feedbackForm, setFeedbackForm] = useState({ rating: 5, comment: '' });
+    const [hasExistingFeedback, setHasExistingFeedback] = useState(false);
     const [aiQuestion, setAiQuestion] = useState('');
     const [aiAnswer, setAiAnswer] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
@@ -111,6 +114,7 @@ const AttendeeDashboard = () => {
         if (nextTicket?.event_id?._id) {
             const eventId = nextTicket.event_id._id;
             fetchCrowdReports(eventId);
+            fetchMyFeedback(eventId);
             
             socket.emit('join_room', `event_${eventId}`);
             
@@ -160,6 +164,47 @@ const AttendeeDashboard = () => {
             toast.error('Email Failed');
         } finally {
             setIsReporting(false);
+        }
+    };
+
+    const submitFeedback = async () => {
+        if (!nextTicket?.event_id?._id) {
+            toast.error('No active event found for feedback');
+            return;
+        }
+
+        setIsSubmittingFeedback(true);
+        try {
+            const res = await axios.post('/feedback', {
+                event_id: nextTicket.event_id._id,
+                rating: Number(feedbackForm.rating),
+                comment: feedbackForm.comment.trim()
+            });
+            setHasExistingFeedback(true);
+            toast.success(res?.data?.isUpdate ? 'Feedback updated successfully' : 'Feedback submitted successfully');
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'Failed to submit feedback');
+        } finally {
+            setIsSubmittingFeedback(false);
+        }
+    };
+
+    const fetchMyFeedback = async (eventId) => {
+        try {
+            const res = await axios.get(`/feedback/my/${eventId}`);
+            if (res.data) {
+                setFeedbackForm({
+                    rating: Number(res.data.rating) || 5,
+                    comment: res.data.comment || ''
+                });
+                setHasExistingFeedback(true);
+            } else {
+                setFeedbackForm({ rating: 5, comment: '' });
+                setHasExistingFeedback(false);
+            }
+        } catch (error) {
+            console.error('Error fetching attendee feedback:', error);
+            setHasExistingFeedback(false);
         }
     };
 
@@ -443,6 +488,63 @@ const AttendeeDashboard = () => {
                                     </button>
                                 )}
                             </div>
+
+                            {nextTicket && (
+                                <div className="app-card border border-white/10 rounded-2xl bg-zinc-950/60 p-5 md:p-6 space-y-4">
+                                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                                        <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.35em]">Attendee Feedback</h3>
+                                        <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">
+                                            {hasExistingFeedback ? 'Edit your feedback' : `For ${nextTicket.event_id?.event_name}`}
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Rating</label>
+                                        <div className="flex items-center gap-2">
+                                            {[1, 2, 3, 4, 5].map((r) => (
+                                                <button
+                                                    key={r}
+                                                    type="button"
+                                                    onClick={() => setFeedbackForm((prev) => ({ ...prev, rating: r }))}
+                                                    className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-all ${
+                                                        feedbackForm.rating >= r
+                                                            ? 'bg-primary/15 border-primary/30 text-primary'
+                                                            : 'bg-white/[0.02] border-white/10 text-white/40 hover:text-white/70'
+                                                    }`}
+                                                >
+                                                    <Star size={14} fill={feedbackForm.rating >= r ? 'currentColor' : 'none'} />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Comment (Optional)</label>
+                                        <textarea
+                                            value={feedbackForm.comment}
+                                            onChange={(e) => setFeedbackForm((prev) => ({ ...prev, comment: e.target.value }))}
+                                            className="w-full bg-white/[0.03] border border-white/5 rounded-xl py-4 px-5 text-[11px] font-black uppercase tracking-widest text-white focus:outline-none focus:border-primary/20 transition-all font-mono min-h-[90px] resize-none"
+                                            placeholder="SHARE YOUR EXPERIENCE..."
+                                        />
+                                    </div>
+
+                                    <Button
+                                        onClick={submitFeedback}
+                                        disabled={isSubmittingFeedback}
+                                        variant="luxury"
+                                        className="w-full h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] disabled:opacity-50"
+                                    >
+                                        {isSubmittingFeedback ? (
+                                            <div className="h-4 w-4 rounded-full border-2 border-background/20 border-t-background animate-spin" />
+                                        ) : (
+                                            <>
+                                                <span>{hasExistingFeedback ? 'Update Feedback' : 'Submit Feedback'}</span>
+                                                <Send size={14} />
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            )}
 
                             {!nextTicket ? (
                                 <div className="py-24 flex flex-col items-center justify-center app-card border-dashed opacity-10">

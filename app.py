@@ -63,6 +63,61 @@ def health_check():
     """
     return jsonify({"status": "running"}), 200
 
+
+@app.route('/api/manager/comparison', methods=['POST'])
+def manager_comparison():
+    """
+    Returns audience and budget comparison metrics for chart rendering.
+    Expects JSON:
+    {
+      "expected_audience": 150,
+      "actual_audience": 100,
+      "planned_budget": 15000,
+      "estimated_spend": 11000
+    }
+    """
+    data = request.json or {}
+
+    expected_audience = float(data.get('expected_audience') or 0)
+    actual_audience = float(data.get('actual_audience') or 0)
+    planned_budget = float(data.get('planned_budget') or 0)
+    estimated_spend = float(data.get('estimated_spend') or 0)
+
+    attendance_rate = (actual_audience / expected_audience) if expected_audience > 0 else 0.0
+    budget_utilization = (estimated_spend / planned_budget) if planned_budget > 0 else 0.0
+
+    audience_gap = expected_audience - actual_audience
+    budget_gap = planned_budget - estimated_spend
+
+    audience_suggestion = (
+        'Attendance is on target.' if attendance_rate >= 0.9
+        else 'Boost reminders and promotions to increase attendance before event start.'
+    )
+
+    budget_suggestion = (
+        'Budget utilization is healthy.' if 0.75 <= budget_utilization <= 1.0
+        else 'Recheck high-cost resources and rebalance quantities to optimize spend.'
+    )
+
+    return jsonify({
+        'audience': {
+            'expected': int(expected_audience),
+            'actual': int(actual_audience),
+            'gap': int(audience_gap),
+            'attendance_rate': round(attendance_rate, 4)
+        },
+        'budget': {
+            'planned': round(planned_budget, 2),
+            'estimated_spend': round(estimated_spend, 2),
+            'gap': round(budget_gap, 2),
+            'utilization': round(budget_utilization, 4)
+        },
+        'suggestions': [
+            audience_suggestion,
+            budget_suggestion
+        ]
+    }), 200
+
 if __name__ == '__main__':
     # Start the Flask development server on port 5000
     print("=== Chatbot API is starting on http://localhost:5000 ===")

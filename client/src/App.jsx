@@ -13,6 +13,7 @@ import ClientDashboard from './pages/ClientDashboard';
 import HireManager from './pages/HireManager';
 import Chat from './pages/Chat';
 import AICommandCenter from './components/AICommandCenter';
+import ManagerAnalytics from './pages/ManagerAnalytics';
 import RejectedEvents from './pages/RejectedEvents';
 import Profile from './pages/Profile';
 import Sidebar from './components/Sidebar';
@@ -106,6 +107,7 @@ const AppLayout = () => {
             <Route path="/hire-manager" element={<ProtectedRoute allowedRoles={['Client', 'Admin']}><HireManager /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
             <Route path="/ai-center" element={<ProtectedRoute allowedRoles={['EventManager', 'Admin']}><AICommandCenter /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute allowedRoles={['EventManager', 'Admin']}><ManagerAnalytics /></ProtectedRoute>} />
             <Route path="/rejected-events" element={<ProtectedRoute allowedRoles={['EventManager', 'Admin']}><RejectedEvents /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>

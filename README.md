@@ -61,6 +61,10 @@ EMAIL_SERVICE=gmail
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_app_password
 EMAIL_FROM=your_email@gmail.com
+
+# Optional: Python NLP sentiment bridge
+PYTHON_EXECUTABLE=d:/Event_Management_Try_Again/.venv/Scripts/python.exe
+SENTIMENT_SCRIPT_PATH=d:/Event_Management_Try_Again/server/nlp/sentiment_ensemble.py
 ```
 
 Start the backend server:

@@ -81,8 +81,16 @@ const Dashboard = () => {
     const [eventTasks, setEventTasks] = useState([]);
     const [missionTab, setMissionTab] = useState('feed'); // 'feed' or 'assign'
     const [missionForm, setMissionForm] = useState({ title: '', description: '', priority: 'Medium', assignedTo: '' });
-    const [logisticsTab, setLogisticsTab] = useState('resources'); // 'resources' or 'missions'
+    const [logisticsTab, setLogisticsTab] = useState('resources'); // 'resources' or 'missions' or 'feedback'
     const [liveAlerts, setLiveAlerts] = useState([]);
+    const [eventFeedback, setEventFeedback] = useState([]);
+    const [feedbackLoading, setFeedbackLoading] = useState(false);
+
+    useEffect(() => {
+        if (showLogistics && selectedEvent?._id && logisticsTab === 'feedback') {
+            fetchEventFeedback(selectedEvent._id);
+        }
+    }, [showLogistics, selectedEvent?._id, logisticsTab]);
 
     useEffect(() => {
         fetchEvents();
@@ -194,6 +202,12 @@ const Dashboard = () => {
             }
         });
 
+        socket.on('feedback_notification', (data) => {
+            if (selectedEvent && data?.eventId === selectedEvent._id) {
+                fetchEventFeedback(selectedEvent._id);
+            }
+        });
+
         return () => {
             socket.off('attendance_update');
             socket.off('task_assigned');
@@ -201,6 +215,7 @@ const Dashboard = () => {
             socket.off('volunteer_emergency');
             socket.off('emergency_alert');
             socket.off('broadcast_emergency');
+            socket.off('feedback_notification');
         };
     }, [user, selectedEvent]);
 
@@ -240,6 +255,20 @@ const Dashboard = () => {
             setEventTasks(res.data);
         } catch (error) {
             console.error('Error fetching event tasks:', error);
+        }
+    };
+
+    const fetchEventFeedback = async (eventId) => {
+        try {
+            setFeedbackLoading(true);
+            const res = await axios.get(`/feedback/event/${eventId}`);
+            setEventFeedback(Array.isArray(res.data) ? res.data : []);
+        } catch (error) {
+            console.error('Error fetching feedback:', error);
+            toast.error(error?.response?.data?.message || 'Failed to fetch feedback data');
+            setEventFeedback([]);
+        } finally {
+            setFeedbackLoading(false);
         }
     };
 
@@ -332,6 +361,7 @@ const Dashboard = () => {
         setShowLogistics(true);
         fetchEventVolunteers(event._id);
         fetchEventTasks(event._id);
+        fetchEventFeedback(event._id);
         setIsManagingLogistics(false);
     };
 
@@ -672,6 +702,12 @@ const Dashboard = () => {
                                         >
                                             Mission Control
                                         </button>
+                                        <button
+                                            onClick={() => setLogisticsTab('feedback')}
+                                            className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${logisticsTab === 'feedback' ? 'bg-primary text-background shadow-glow' : 'text-white/60 hover:text-white'}`}
+                                        >
+                                            Feedbacks
+                                        </button>
                                     </div>
 
                                     {logisticsTab === 'resources' ? (
@@ -783,7 +819,7 @@ const Dashboard = () => {
                                                 </div>
                                             )}
                                         </>
-                                    ) : (
+                                    ) : logisticsTab === 'missions' ? (
                                         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                             {/* Mission Tabs */}
                                             <div className="flex gap-4 mb-8">
@@ -870,6 +906,62 @@ const Dashboard = () => {
                                                         ))
                                                     )}
                                                 </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                            {feedbackLoading ? (
+                                                <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem] opacity-40">
+                                                    <Activity size={32} className="mb-4 animate-pulse" />
+                                                    <p className="text-[10px] font-black uppercase tracking-widest">Loading feedback</p>
+                                                </div>
+                                            ) : eventFeedback.length === 0 ? (
+                                                <div className="py-24 px-6 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-[2rem] opacity-40 text-center">
+                                                    <MessageSquare size={36} className="mb-4" />
+                                                    <p className="text-[10px] font-black uppercase tracking-[0.4em]">No attendee feedback found</p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="space-y-4 max-h-[52vh] overflow-y-auto no-scrollbar scrollbar-hide pr-2">
+                                                        {eventFeedback.map((item) => {
+                                                            const sentimentLabel = (item.emotion_ai || 'unknown').toLowerCase();
+                                                            const sentimentClasses = sentimentLabel.includes('positive')
+                                                                ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/10'
+                                                                : sentimentLabel.includes('negative')
+                                                                    ? 'text-rose-400 border-rose-500/20 bg-rose-500/10'
+                                                                    : 'text-amber-400 border-amber-500/20 bg-amber-500/10';
+
+                                                            return (
+                                                                <div key={item._id} className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-primary/20 transition-all">
+                                                                    <div className="flex items-start justify-between gap-4 mb-4">
+                                                                        <div>
+                                                                            <p className="text-[11px] font-black text-white uppercase tracking-widest">{item.user_id?.name || 'Attendee'}</p>
+                                                                            <p className="text-[9px] text-white/40 font-black uppercase tracking-[0.2em] mt-1">
+                                                                                {new Date(item.created_at).toLocaleString()}
+                                                                            </p>
+                                                                        </div>
+                                                                        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest">
+                                                                            {Number(item.rating) || 0}/5
+                                                                        </Badge>
+                                                                    </div>
+
+                                                                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                                                                        <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest ${sentimentClasses}`}>
+                                                                            {item.emotion_ai || 'Unknown Sentiment'}
+                                                                        </Badge>
+                                                                        <span className="text-[9px] text-white/50 font-black uppercase tracking-[0.2em]">
+                                                                            Score: {typeof item.sentiment_score_ai === 'number' ? item.sentiment_score_ai.toFixed(2) : 'N/A'}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <p className="text-[11px] text-white/80 font-bold uppercase tracking-wide leading-relaxed">
+                                                                        {item.comment || 'No comment provided.'}
+                                                                    </p>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </>
                                             )}
                                         </div>
                                     )}

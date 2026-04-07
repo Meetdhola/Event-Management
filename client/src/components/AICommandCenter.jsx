@@ -103,26 +103,6 @@ const AICommandCenter = ({ eventId }) => {
         const msg = messages[msgIndex];
         setLoading(true);
         try {
-            if (msg.action === 'GENERATE_REPORT') {
-                if (!resolvedEventId) {
-                    toast.error('Select an event before generating report');
-                    return;
-                }
-
-                const pdfRes = await axios.post('/ai/report/pdf', { eventId: resolvedEventId }, { responseType: 'blob' });
-                const blob = new Blob([pdfRes.data], { type: 'application/pdf' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `event-analytics-${resolvedEventId}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-                toast.success('Analytics PDF downloaded');
-                return;
-            }
-
             const res = await axios.post('/ai/execute', {
                 action: msg.action,
                 data: msg.data,
@@ -157,18 +137,6 @@ const AICommandCenter = ({ eventId }) => {
             );
             case 'BUDGET_SUMMARY': return <span className="flex items-center gap-1 text-[11px] font-bold text-green-500 uppercase"><TrendingUp size={10} /> Financial Insight</span>;
             case 'READINESS_UPDATE': return <span className="flex items-center gap-1 text-[11px] font-bold text-blue-500 uppercase"><Shield size={10} /> Security Verified</span>;
-            case 'GENERATE_REPORT': return (
-                <div className="flex flex-col gap-3">
-                    <span className="flex items-center gap-1 text-[11px] font-bold text-cyan-400 uppercase"><TrendingUp size={10} /> Analytics Report Ready</span>
-                    <Button
-                        onClick={() => handleExecute(index)}
-                        variant="luxury"
-                        className="w-full h-10 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-cyan-500/20"
-                    >
-                        Download PDF Report
-                    </Button>
-                </div>
-            );
             default: return null;
         }
     }
@@ -287,7 +255,7 @@ const AICommandCenter = ({ eventId }) => {
                 </form>
 
                 <div className="mt-5 flex gap-4 overflow-x-auto pb-2 no-scrollbar px-1">
-                    {['status overview', 'security check', 'budget report', 'generate analytics report'].map(suggestion => (
+                    {['status overview', 'security check', 'budget report'].map(suggestion => (
                         <button
                             key={suggestion}
                             type="button"

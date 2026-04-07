@@ -14,6 +14,7 @@ import {
     MessageSquare,
     Briefcase,
     Archive,
+    BarChart3,
     X,
     Crown
 } from 'lucide-react';
@@ -79,6 +80,12 @@ const Sidebar = ({ isOpen, onClose }) => {
             label: 'AI Assistant',
             path: '/ai-center',
             icon: Zap,
+            roles: ['Admin', 'EventManager']
+        },
+        {
+            label: 'Analytics',
+            path: '/analytics',
+            icon: BarChart3,
             roles: ['Admin', 'EventManager']
         }
     ].filter(item => item.roles.includes(user.role));
