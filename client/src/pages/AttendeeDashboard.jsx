@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -17,8 +17,7 @@ import {
     Filter,
     Compass,
     Sparkles,
-    CheckCircle2,
-    Bot
+    CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge, Card, Button, Input } from '../components/ui/Components';
@@ -95,16 +94,19 @@ const AttendeeDashboard = () => {
     const [showReportModal, setShowReportModal] = useState(false);
     const [isReporting, setIsReporting] = useState(false);
     const [reportForm, setReportForm] = useState({ location: '', status: 'Normal', message: '' });
-    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-    const [feedbackForm, setFeedbackForm] = useState({ rating: 5, comment: '' });
-    const [hasExistingFeedback, setHasExistingFeedback] = useState(false);
-    const [aiQuestion, setAiQuestion] = useState('');
-    const [aiAnswer, setAiAnswer] = useState('');
-    const [aiLoading, setAiLoading] = useState(false);
-    const [showAiWidget, setShowAiWidget] = useState(false);
 
-    const upcomingTickets = tickets.filter(t => new Date(t.event_id?.start_date) > new Date()).sort((a,b) => new Date(a.event_id?.start_date) - new Date(b.event_id?.start_date));
+    const upcomingTickets = tickets.filter(t => new Date(t.event_id?.end_date || t.event_id?.start_date) > new Date()).sort((a,b) => new Date(a.event_id?.start_date) - new Date(b.event_id?.start_date));
+    const pastTickets = tickets.filter(t => new Date(t.event_id?.end_date || t.event_id?.start_date) <= new Date()).sort((a,b) => new Date(b.event_id?.start_date) - new Date(a.event_id?.start_date));
     const nextTicket = upcomingTickets.length > 0 ? upcomingTickets[0] : null;
+
+    const getEventStatus = (event) => {
+        const now = new Date();
+        const start = new Date(event.start_date);
+        const end = new Date(event.end_date);
+        if (now > end) return { label: 'Completed', color: 'text-white/40 bg-white/5 border-white/10' };
+        if (now >= start && now <= end) return { label: 'Ongoing', color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' };
+        return { label: 'Upcoming', color: 'text-primary bg-primary/10 border-primary/20' };
+    };
 
     useEffect(() => {
         fetchAttendeeData();
@@ -114,14 +116,13 @@ const AttendeeDashboard = () => {
         if (nextTicket?.event_id?._id) {
             const eventId = nextTicket.event_id._id;
             fetchCrowdReports(eventId);
-            fetchMyFeedback(eventId);
             
             socket.emit('join_room', `event_${eventId}`);
             
             const handleUpdate = (newReport) => {
                 setCrowdReports(prev => [newReport, ...prev].slice(0, 20));
                 toast(`New Crowd Alert: ${newReport.location} is ${newReport.status}`, {
-                    icon: '!',
+                    icon: '🚨',
                     style: {
                         borderRadius: '1rem',
                         background: '#09090b',
@@ -164,47 +165,6 @@ const AttendeeDashboard = () => {
             toast.error('Email Failed');
         } finally {
             setIsReporting(false);
-        }
-    };
-
-    const submitFeedback = async () => {
-        if (!nextTicket?.event_id?._id) {
-            toast.error('No active event found for feedback');
-            return;
-        }
-
-        setIsSubmittingFeedback(true);
-        try {
-            const res = await axios.post('/feedback', {
-                event_id: nextTicket.event_id._id,
-                rating: Number(feedbackForm.rating),
-                comment: feedbackForm.comment.trim()
-            });
-            setHasExistingFeedback(true);
-            toast.success(res?.data?.isUpdate ? 'Feedback updated successfully' : 'Feedback submitted successfully');
-        } catch (error) {
-            toast.error(error?.response?.data?.message || 'Failed to submit feedback');
-        } finally {
-            setIsSubmittingFeedback(false);
-        }
-    };
-
-    const fetchMyFeedback = async (eventId) => {
-        try {
-            const res = await axios.get(`/feedback/my/${eventId}`);
-            if (res.data) {
-                setFeedbackForm({
-                    rating: Number(res.data.rating) || 5,
-                    comment: res.data.comment || ''
-                });
-                setHasExistingFeedback(true);
-            } else {
-                setFeedbackForm({ rating: 5, comment: '' });
-                setHasExistingFeedback(false);
-            }
-        } catch (error) {
-            console.error('Error fetching attendee feedback:', error);
-            setHasExistingFeedback(false);
         }
     };
 
@@ -274,30 +234,19 @@ const AttendeeDashboard = () => {
         setAttendees(newAttendees);
     };
 
-    const filteredEvents = events.filter(e => {
-        const isUpcoming = new Date(e.start_date) > new Date();
+    const upcomingEvents = events.filter(e => {
+        const isPast = new Date(e.end_date || e.start_date) <= new Date();
         const matchesSearch = e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                              e.venue.toLowerCase().includes(searchQuery.toLowerCase());
-        return isUpcoming && matchesSearch;
-    });
+        return !isPast && matchesSearch;
+    }).sort((a,b) => new Date(a.start_date) - new Date(b.start_date));
 
-    const handleAskAnything = async (e) => {
-        e.preventDefault();
-        const question = aiQuestion.trim();
-        if (!question) return;
-
-        setAiLoading(true);
-        try {
-            const chatbotBaseUrl = import.meta.env.VITE_CHATBOT_API_URL || 'http://localhost:5000';
-            const res = await axios.post(`${chatbotBaseUrl}/api/chat`, { question });
-            setAiAnswer(res.data?.answer || "I don't have that information");
-            setAiQuestion('');
-        } catch (error) {
-            setAiAnswer('Unable to reach AI assistant right now.');
-        } finally {
-            setAiLoading(false);
-        }
-    };
+    const pastEvents = events.filter(e => {
+        const isPast = new Date(e.end_date || e.start_date) <= new Date();
+        const matchesSearch = e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                             e.venue.toLowerCase().includes(searchQuery.toLowerCase());
+        return isPast && matchesSearch;
+    }).sort((a,b) => new Date(b.start_date) - new Date(a.start_date));
 
     if (loading) {
         return (
@@ -331,7 +280,7 @@ const AttendeeDashboard = () => {
                         <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none uppercase">
                             aura <span className="text-gradient-gold-soft italic font-serif">LOUNGE.</span>
                         </h1>
-                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Authorized elite entry | Guest Active</p>
+                        <p className="text-[11px] text-white/70 mt-3 uppercase tracking-[0.4em] font-black">Authorized elite entry • Guest Active</p>
                     </div>
                 </div>
 
@@ -362,116 +311,207 @@ const AttendeeDashboard = () => {
 
                 <AnimatePresence mode="wait">
                     {activeTab === 'explore' ? (
-                        <motion.div key="explore" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                        <motion.div key="explore" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-10">
                             {/* Search IQ */}
                             <div className="relative group">
                                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/80 group-focus-within:text-primary transition-colors" size={16} />
                                 <input
                                     type="text"
-                                    placeholder="Filter experience grid..."
+                                    placeholder="Filter discover grid..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-14 pr-6 text-xs font-black uppercase tracking-widest text-white placeholder:text-white/80 focus:outline-none focus:border-primary/20 transition-all font-mono"
+                                    className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-14 pr-6 text-xs font-black uppercase tracking-widest text-white placeholder:text-white/40 focus:outline-none focus:border-primary/20 transition-all font-mono"
                                 />
                             </div>
 
-                            <div className="space-y-4">
-                                {filteredEvents.map((event, index) => (
-                                    <motion.div
-                                        key={event._id}
-                                        initial={{ opacity: 0, y: 16 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: index * 0.04 }}
-                                        className="relative app-card flex flex-col bg-zinc-950/80 border border-white/5 rounded-[2rem] overflow-hidden group hover:border-primary/20 transition-all shadow-2xl"
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-tl from-primary/5 via-transparent to-zinc-900/50 opacity-0 group-hover:opacity-100 transition-opacity z-0" />
-                                        
-                                        <div className="p-8 relative z-10 flex flex-col items-center text-center">
-                                            <div className="mb-6 flex gap-3 items-center">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                                                <span className="text-[10px] text-primary font-black uppercase tracking-[0.3em]">Aura Exclusive</span>
-                                            </div>
-                                            <h3 className="text-2xl sm:text-3xl font-serif text-white uppercase italic tracking-widest mb-8 text-glow-gold transition-all duration-500">{event.event_name || 'Premium Activation'}</h3>
-                                            
-                                            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-10 text-[11px] text-white/80 font-black uppercase tracking-widest bg-white/[0.02] px-8 py-4 rounded-xl border border-white/5">
-                                                <span className="flex items-center gap-3"><Calendar size={14} className="text-primary/70" /> {new Date(event.start_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                                                <span className="hidden sm:block text-white/20">|</span>
-                                                <span className="flex items-center gap-3"><MapPin size={14} className="text-primary/70" /> {event.venue}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Structured Divider */}
-                                        <div className="relative flex items-center h-8 bg-zinc-950/80">
-                                            <div className="absolute -left-4 w-8 h-8 rounded-full bg-background border-r border-white/5 group-hover:border-primary/20 shadow-inner z-20" />
-                                            <div className="w-full border-t border-dashed border-white/20 mx-6 opacity-40 group-hover:border-primary/40 transition-colors" />
-                                            <div className="absolute -right-4 w-8 h-8 rounded-full bg-background border-l border-white/5 group-hover:border-primary/20 shadow-inner z-20" />
-                                        </div>
-
-                                        <div className="p-6 bg-zinc-950/80 relative z-10">
-                                            <Button
-                                                onClick={() => handleBookTicket(event)}
-                                                variant="luxury"
-                                                className="w-full h-14 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-glow group"
-                                            >
-                                                <span>Secure Entry Pass</span>
-                                                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                                            </Button>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
-                        </motion.div>
-                    ) : activeTab === 'vault' ? (
-                        <motion.div key="vault" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="space-y-6">
-                            <h2 className="text-[11px] font-black text-white/90 px-1 uppercase tracking-[0.4em]">My Secure Encrypts</h2>
-                            {tickets.length === 0 ? (
-                                <div className="py-24 flex flex-col items-center justify-center app-card border-dashed opacity-10">
-                                    <Ticket size={48} className="mb-4" />
-                                    <p className="text-[11px] font-black uppercase tracking-[0.5em]">Vault empty. Secure an entry protocol.</p>
+                            {/* Active Deployments */}
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between px-1">
+                                    <h2 className="text-[11px] font-black text-white/90 uppercase tracking-[0.4em]">Active Deployments</h2>
+                                    <Badge variant="primary" className="text-[9px] font-black">{upcomingEvents.length} READY</Badge>
                                 </div>
-                            ) : (
-                                <div className="grid grid-cols-1 gap-4">
-                                    {tickets.map((ticket, index) => (
-                                        <motion.div
-                                            key={ticket._id}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: index * 0.05 }}
-                                            onClick={() => setSelectedTicket(ticket)}
-                                            className="app-card relative flex flex-col md:flex-row bg-zinc-950/80 border border-white/5 rounded-2xl overflow-hidden group hover:border-primary/30 transition-all cursor-pointer shadow-xl"
-                                        >
-                                            <div className="p-6 md:p-8 flex-1 flex flex-col sm:flex-row items-start sm:items-center gap-6 md:border-r border-dashed border-white/10 group-hover:border-primary/30 transition-colors">
-                                                <div className="w-16 h-16 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-background transition-all shadow-glow flex-shrink-0">
-                                                    <QrCode size={28} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-xl font-serif uppercase tracking-widest text-white italic truncate">{ticket.event_id?.event_name || 'Authorized Entry'}</p>
-                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-3 opacity-70">
-                                                        <span className="text-[11px] font-black text-primary uppercase tracking-widest">
-                                                            {ticket.attendees?.[0]?.name}
-                                                            {ticket.attendees?.length > 1 && ` + ${ticket.attendees.length - 1} OTHERS`}
-                                                        </span>
-                                                        <span className="hidden sm:block text-white/30">|</span>
-                                                        <span className="text-[10px] text-white/70 font-bold tracking-widest">
-                                                            ENTRY CONFIRMED
+                                <div className="space-y-4">
+                                    {upcomingEvents.map((event, index) => {
+                                        const status = getEventStatus(event);
+                                        return (
+                                            <motion.div
+                                                key={event._id}
+                                                initial={{ opacity: 0, y: 16 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: index * 0.04 }}
+                                                className="relative app-card flex flex-col bg-zinc-950/80 border border-white/5 rounded-[2rem] overflow-hidden group hover:border-primary/20 transition-all shadow-2xl"
+                                            >
+                                                <div className="absolute inset-0 bg-gradient-to-tl from-primary/5 via-transparent to-zinc-900/50 opacity-0 group-hover:opacity-100 transition-opacity z-0" />
+                                                
+                                                <div className="p-8 relative z-10 flex flex-col items-center text-center">
+                                                    <div className="mb-6 flex gap-3 items-center">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-[0.3em] border ${status.color}`}>
+                                                            {status.label}
                                                         </span>
                                                     </div>
+                                                    <h3 className="text-2xl sm:text-3xl font-serif text-white uppercase italic tracking-widest mb-8 text-glow-gold transition-all duration-500">{event.event_name || 'Premium Activation'}</h3>
+                                                    
+                                                    <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-10 text-[11px] text-white/80 font-black uppercase tracking-widest bg-white/[0.02] px-8 py-4 rounded-xl border border-white/5">
+                                                        <span className="flex items-center gap-3"><Calendar size={14} className="text-primary/70" /> {new Date(event.start_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                                                        <span className="hidden sm:block text-white/20">|</span>
+                                                        <span className="flex items-center gap-3"><MapPin size={14} className="text-primary/70" /> {event.venue}</span>
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Notches for Desktop View */}
-                                            <div className="hidden md:block absolute top-[50%] right-[160px] -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-background border-l border-white/5 z-20" />
-                                            
-                                            <div className="p-6 md:p-8 md:w-40 flex items-center justify-between md:justify-center bg-zinc-900/50">
-                                                <div className="flex flex-col items-start md:items-center text-left md:text-center">
-                                                    <span className="text-[9px] text-white/50 font-black uppercase tracking-[0.3em] mb-2">Ticket ID</span>
-                                                    <span className="text-[13px] font-mono font-black text-white tracking-widest">{ticket._id.slice(-6).toUpperCase()}</span>
+                                                {/* Structured Divider */}
+                                                <div className="relative flex items-center h-8 bg-zinc-950/80">
+                                                    <div className="absolute -left-4 w-8 h-8 rounded-full bg-background border-r border-white/5 group-hover:border-primary/20 shadow-inner z-20" />
+                                                    <div className="w-full border-t border-dashed border-white/20 mx-6 opacity-40 group-hover:border-primary/40 transition-colors" />
+                                                    <div className="absolute -right-4 w-8 h-8 rounded-full bg-background border-l border-white/5 group-hover:border-primary/20 shadow-inner z-20" />
                                                 </div>
-                                                <ChevronRight size={20} className="text-white/30 group-hover:text-primary transition-transform group-hover:translate-x-1 md:hidden" />
-                                            </div>
-                                        </motion.div>
-                                    ))}
+
+                                                <div className="p-6 bg-zinc-950/80 relative z-10">
+                                                    <Button
+                                                        onClick={() => handleBookTicket(event)}
+                                                        variant="luxury"
+                                                        className="w-full h-14 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-3 shadow-glow group"
+                                                    >
+                                                        <span>Secure Entry Pass</span>
+                                                        <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                                                    </Button>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
                                 </div>
+                            </div>
+
+                            {/* Historical Archives */}
+                            {pastEvents.length > 0 && (
+                                <div className="space-y-6 pt-10 border-t border-white/5">
+                                    <div className="flex items-center justify-between px-1">
+                                        <h2 className="text-[11px] font-black text-white/40 uppercase tracking-[0.4em]">Historical Archives</h2>
+                                        <Badge variant="outline" className="text-[9px] font-black opacity-50">{pastEvents.length} CLOSED</Badge>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {pastEvents.map((event, index) => (
+                                            <motion.div
+                                                key={event._id}
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl grayscale hover:grayscale-0 transition-all group"
+                                            >
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em] border border-white/10 px-2 py-0.5 rounded">Completed</span>
+                                                            <h4 className="text-lg font-serif italic text-white/70 group-hover:text-white transition-colors">{event.event_name}</h4>
+                                                        </div>
+                                                        <div className="flex items-center gap-6 text-[10px] text-white/40 font-black uppercase tracking-widest">
+                                                            <span className="flex items-center gap-2"><Calendar size={12} /> {new Date(event.start_date).toLocaleDateString()}</span>
+                                                            <span className="flex items-center gap-2"><MapPin size={12} /> {event.venue}</span>
+                                                        </div>
+                                                    </div>
+                                                    <Button variant="ghost-luxury" disabled className="text-[9px] opacity-30 h-10 px-6 rounded-xl">Regsitration Closed</Button>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </motion.div>
+                    ) : activeTab === 'vault' ? (
+                        <motion.div key="vault" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="space-y-10">
+                            {/* Upcoming Section */}
+                            <section className="space-y-6">
+                                <div className="flex items-center justify-between px-1">
+                                    <h2 className="text-[11px] font-black text-white/90 uppercase tracking-[0.4em]">Future Mandates</h2>
+                                    <Badge variant="primary" className="text-[9px] font-black px-3 py-1">{upcomingTickets.length} ACTIVE</Badge>
+                                </div>
+                                {upcomingTickets.length === 0 ? (
+                                    <div className="py-16 flex flex-col items-center justify-center app-card border-dashed opacity-10">
+                                        <Ticket size={32} className="mb-4" />
+                                        <p className="text-[10px] font-black uppercase tracking-[0.5em]">No future deployments scheduled.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {upcomingTickets.map((ticket, index) => {
+                                            const status = getEventStatus(ticket.event_id);
+                                            return (
+                                                <motion.div
+                                                    key={ticket._id}
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: index * 0.05 }}
+                                                    onClick={() => setSelectedTicket(ticket)}
+                                                    className="app-card relative flex flex-col md:flex-row bg-zinc-950/80 border border-white/5 rounded-2xl overflow-hidden group hover:border-primary/30 transition-all cursor-pointer shadow-xl"
+                                                >
+                                                    <div className="p-6 md:p-8 flex-1 flex flex-col sm:flex-row items-start sm:items-center gap-6 md:border-r border-dashed border-white/10 group-hover:border-primary/30 transition-colors">
+                                                        <div className="w-16 h-16 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-background transition-all shadow-glow flex-shrink-0">
+                                                            <QrCode size={28} />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-3 mb-2">
+                                                                <p className="text-xl font-serif uppercase tracking-widest text-white italic truncate">{ticket.event_id?.event_name || 'Authorized Entry'}</p>
+                                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${status.color}`}>
+                                                                    {status.label}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-3 opacity-70">
+                                                                <span className="text-[11px] font-black text-primary uppercase tracking-widest">
+                                                                    {ticket.attendees?.[0]?.name}
+                                                                    {ticket.attendees?.length > 1 && ` + ${ticket.attendees.length - 1} OTHERS`}
+                                                                </span>
+                                                                <span className="hidden sm:block text-white/30">•</span>
+                                                                <span className="text-[10px] text-white/70 font-bold tracking-widest">
+                                                                    {new Date(ticket.event_id?.start_date).toLocaleDateString()}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-6 md:p-8 md:w-40 flex items-center justify-between md:justify-center bg-zinc-900/50">
+                                                        <div className="flex flex-col items-start md:items-center text-left md:text-center">
+                                                            <span className="text-[9px] text-white/50 font-black uppercase tracking-[0.3em] mb-2">Ticket ID</span>
+                                                            <span className="text-[13px] font-mono font-black text-white tracking-widest">{ticket._id.slice(-6).toUpperCase()}</span>
+                                                        </div>
+                                                        <ChevronRight size={20} className="text-white/30 group-hover:text-primary transition-transform group-hover:translate-x-1 md:hidden" />
+                                                    </div>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </section>
+
+                            {/* Archive Section */}
+                            {pastTickets.length > 0 && (
+                                <section className="space-y-6 pt-10 border-t border-white/5">
+                                    <div className="flex items-center justify-between px-1">
+                                        <h2 className="text-[11px] font-black text-white/40 uppercase tracking-[0.4em]">Archive History</h2>
+                                        <Badge variant="outline" className="text-[9px] font-black opacity-50">{pastTickets.length} COMPLETED</Badge>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {pastTickets.map((ticket, index) => (
+                                            <motion.div
+                                                key={ticket._id}
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                onClick={() => setSelectedTicket(ticket)}
+                                                className="p-5 flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-xl grayscale hover:grayscale-0 transition-all cursor-pointer group"
+                                            >
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-white/20 group-hover:text-primary transition-colors">
+                                                        <Ticket size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-black text-white/70 uppercase tracking-widest group-hover:text-white transition-colors">{ticket.event_id?.event_name}</p>
+                                                        <p className="text-[9px] text-white/30 font-bold tracking-widest uppercase mt-1">{new Date(ticket.event_id?.start_date).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[8px] font-black text-white/20 uppercase tracking-[0.2em] group-hover:text-emerald-500/50 transition-colors">COMPLETED</span>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </section>
                             )}
                         </motion.div>
                     ) : (
@@ -488,63 +528,6 @@ const AttendeeDashboard = () => {
                                     </button>
                                 )}
                             </div>
-
-                            {nextTicket && (
-                                <div className="app-card border border-white/10 rounded-2xl bg-zinc-950/60 p-5 md:p-6 space-y-4">
-                                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                                        <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.35em]">Attendee Feedback</h3>
-                                        <span className="text-[9px] font-black text-white/50 uppercase tracking-widest">
-                                            {hasExistingFeedback ? 'Edit your feedback' : `For ${nextTicket.event_id?.event_name}`}
-                                        </span>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Rating</label>
-                                        <div className="flex items-center gap-2">
-                                            {[1, 2, 3, 4, 5].map((r) => (
-                                                <button
-                                                    key={r}
-                                                    type="button"
-                                                    onClick={() => setFeedbackForm((prev) => ({ ...prev, rating: r }))}
-                                                    className={`w-9 h-9 rounded-lg border flex items-center justify-center transition-all ${
-                                                        feedbackForm.rating >= r
-                                                            ? 'bg-primary/15 border-primary/30 text-primary'
-                                                            : 'bg-white/[0.02] border-white/10 text-white/40 hover:text-white/70'
-                                                    }`}
-                                                >
-                                                    <Star size={14} fill={feedbackForm.rating >= r ? 'currentColor' : 'none'} />
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-white/80 uppercase tracking-[0.3em] px-1">Comment (Optional)</label>
-                                        <textarea
-                                            value={feedbackForm.comment}
-                                            onChange={(e) => setFeedbackForm((prev) => ({ ...prev, comment: e.target.value }))}
-                                            className="w-full bg-white/[0.03] border border-white/5 rounded-xl py-4 px-5 text-[11px] font-black uppercase tracking-widest text-white focus:outline-none focus:border-primary/20 transition-all font-mono min-h-[90px] resize-none"
-                                            placeholder="SHARE YOUR EXPERIENCE..."
-                                        />
-                                    </div>
-
-                                    <Button
-                                        onClick={submitFeedback}
-                                        disabled={isSubmittingFeedback}
-                                        variant="luxury"
-                                        className="w-full h-12 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] disabled:opacity-50"
-                                    >
-                                        {isSubmittingFeedback ? (
-                                            <div className="h-4 w-4 rounded-full border-2 border-background/20 border-t-background animate-spin" />
-                                        ) : (
-                                            <>
-                                                <span>{hasExistingFeedback ? 'Update Feedback' : 'Submit Feedback'}</span>
-                                                <Send size={14} />
-                                            </>
-                                        )}
-                                    </Button>
-                                </div>
-                            )}
 
                             {!nextTicket ? (
                                 <div className="py-24 flex flex-col items-center justify-center app-card border-dashed opacity-10">
@@ -634,7 +617,7 @@ const AttendeeDashboard = () => {
                                     <button onClick={() => setSelectedTicket(null)} className="absolute top-8 right-8 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/80 hover:text-white transition-all"><X size={20} /></button>
 
                                     <div className="mt-4 mb-4 text-center">
-                                        <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-4">Entry Verified | Level 1 Access</div>
+                                        <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-4">Entry Verified • Level 1 Access</div>
                                         <h2 className="text-2xl font-serif text-white tracking-widest uppercase italic leading-tight">{selectedTicket.event_id?.event_name}</h2>
                                         
                                         <div className="flex items-center justify-center gap-3 mt-6 text-[10px] font-black text-white/60 uppercase tracking-widest bg-white/5 py-3 px-6 rounded-2xl border border-white/5">
@@ -897,77 +880,6 @@ const AttendeeDashboard = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                <div className="fixed bottom-6 right-4 sm:right-8 z-[80]">
-                    <AnimatePresence>
-                        {showAiWidget && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 12, scale: 0.96 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 12, scale: 0.96 }}
-                                className="w-[92vw] max-w-md mb-3 app-card p-5 border border-white/10 rounded-2xl bg-zinc-950/95 backdrop-blur-xl space-y-4 shadow-2xl"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-[12px] font-black text-white/90 uppercase tracking-[0.28em]">Attendee AI</h2>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowAiWidget(false)}
-                                        className="text-white/60 hover:text-white transition-colors"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                </div>
-                                <p className="text-[11px] text-white/65 font-black uppercase tracking-[0.16em]">
-                                    Ask event name, venue, date, status, or audience.
-                                </p>
-                                <form onSubmit={handleAskAnything} className="flex items-center gap-3">
-                                    <input
-                                        type="text"
-                                        value={aiQuestion}
-                                        onChange={(e) => setAiQuestion(e.target.value)}
-                                        placeholder="Ask about your event..."
-                                        className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl py-3 px-4 text-[12px] font-black uppercase tracking-[0.12em] text-white placeholder:text-white/70 focus:outline-none focus:border-primary/40 transition-all"
-                                    />
-                                    <Button
-                                        type="submit"
-                                        disabled={aiLoading || !aiQuestion.trim()}
-                                        variant="luxury"
-                                        className="h-11 px-4 rounded-xl text-[11px] font-black uppercase tracking-[0.16em] disabled:opacity-50"
-                                    >
-                                        {aiLoading ? 'Asking...' : 'Ask'}
-                                    </Button>
-                                </form>
-                                <div className="flex flex-wrap gap-2">
-                                    {['UDAAN event details', 'next event date', 'event venue'].map((q) => (
-                                        <button
-                                            key={q}
-                                            type="button"
-                                            onClick={() => setAiQuestion(q)}
-                                            className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-[10px] font-black uppercase tracking-[0.1em] text-white/80 hover:text-primary hover:border-primary/20 transition-all"
-                                        >
-                                            {q}
-                                        </button>
-                                    ))}
-                                </div>
-                                {aiAnswer && (
-                                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 text-[12px] text-white/90 leading-relaxed max-h-56 overflow-y-auto custom-scrollbar">
-                                        {aiAnswer}
-                                    </div>
-                                )}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    <button
-                        type="button"
-                        onClick={() => setShowAiWidget((prev) => !prev)}
-                        className="h-14 px-4 rounded-2xl bg-primary text-background shadow-[0_10px_30px_rgba(212,175,55,0.35)] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
-                        aria-label="Toggle attendee AI chatbot"
-                    >
-                        <Bot size={20} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">AI Chatbot</span>
-                    </button>
-                </div>
             </div>
         </div>
     );

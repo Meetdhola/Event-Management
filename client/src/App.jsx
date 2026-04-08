@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import CreateEvent from './pages/CreateEvent';
 import AdminDashboard from './pages/AdminDashboard';
@@ -13,7 +14,6 @@ import ClientDashboard from './pages/ClientDashboard';
 import HireManager from './pages/HireManager';
 import Chat from './pages/Chat';
 import AICommandCenter from './components/AICommandCenter';
-import ManagerAnalytics from './pages/ManagerAnalytics';
 import RejectedEvents from './pages/RejectedEvents';
 import Profile from './pages/Profile';
 import Sidebar from './components/Sidebar';
@@ -65,7 +65,7 @@ const AppLayout = () => {
   }
 
   if (!user) {
-    const isPublicPage = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register';
+    const isPublicPage = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/forgot-password';
     if (!isPublicPage) {
       return <Navigate to="/" replace />;
     }
@@ -75,13 +75,14 @@ const AppLayout = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
         </Routes>
       </div>
     );
   }
 
   // If user is logged in but tries to access login/register/home, redirect to dashboard
-  if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/') {
+  if (location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/' || location.pathname === '/forgot-password') {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -107,7 +108,6 @@ const AppLayout = () => {
             <Route path="/hire-manager" element={<ProtectedRoute allowedRoles={['Client', 'Admin']}><HireManager /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
             <Route path="/ai-center" element={<ProtectedRoute allowedRoles={['EventManager', 'Admin']}><AICommandCenter /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute allowedRoles={['EventManager', 'Admin']}><ManagerAnalytics /></ProtectedRoute>} />
             <Route path="/rejected-events" element={<ProtectedRoute allowedRoles={['EventManager', 'Admin']}><RejectedEvents /></ProtectedRoute>} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const Button = ({ className, children, isLoading, variant = 'luxury', ...props }) => {
     const variants = {
@@ -48,31 +49,45 @@ export const Button = ({ className, children, isLoading, variant = 'luxury', ...
     );
 };
 
-export const Input = ({ label, className, error, id, icon: Icon, required, ...props }) => {
+export const Input = ({ label, className, error, id, icon: Icon, required, type, ...props }) => {
+    const [showPassword, setShowPassword] = useState(false);
+    const isPassword = type === 'password';
+
     return (
         <div className="space-y-2 w-full group">
             {label && (
-                <label htmlFor={id} className="text-[11px] uppercase tracking-[0.3em] font-bold text-muted ml-1 group-focus-within:text-gradient-primary transition-all duration-300">
+                <label htmlFor={id} className="text-[14px] uppercase tracking-[0.2em] font-bold text-muted ml-1 group-focus-within:text-gradient-primary transition-all duration-300">
                     {label}{required && <span className="text-red-500 ml-1 text-xs leading-none">*</span>}
                 </label>
             )}
             <div className="relative">
                 {Icon && (
                     <div className="absolute left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-primary transition-colors">
-                        <Icon size={16} />
+                        <Icon size={18} />
                     </div>
                 )}
                 <input
                     id={id}
                     required={required}
+                    type={isPassword ? (showPassword ? 'text' : 'password') : type}
                     className={cn(
                         "input-luxury",
-                        Icon && "pl-12",
+                        Icon && "pl-14",
+                        isPassword && "pr-14",
                         error && "border-red-500/50 focus:border-red-500/50",
                         className
                     )}
                     {...props}
                 />
+                {isPassword && (
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-5 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors focus:outline-none"
+                    >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                )}
             </div>
             {error && <p className="text-[11px] uppercase tracking-wider text-red-500 ml-1 font-bold">{error}</p>}
         </div>

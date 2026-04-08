@@ -8,9 +8,6 @@ import { cn } from '../lib/utils';
 import { toast } from 'react-hot-toast';
 
 const Register = () => {
-    const phoneRegex = /^(?:\+91\s?)?\d{10}$/;
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         name: '',
@@ -27,6 +24,25 @@ const Register = () => {
 
     const handleRoleSelect = (role) => {
         setFormData({ ...formData, role });
+    };
+
+    const handleOTPChange = (e) => {
+        const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+        setFormData({ ...formData, otp: val });
+
+        if (val.length === 6) {
+            toast.success("Handshake sequence complete", {
+                duration: 1500,
+                style: {
+                    background: '#09090b',
+                    color: '#d4af37',
+                    border: '1px solid rgba(212, 175, 55, 0.2)',
+                    fontSize: '11px',
+                    fontWeight: '900',
+                    textTransform: 'uppercase',
+                }
+            });
+        }
     };
 
     const handleSendOTP = async () => {
@@ -65,22 +81,8 @@ const Register = () => {
             return;
         }
 
-        const normalizedPhone = formData.phone.trim();
-        if (!phoneRegex.test(normalizedPhone)) {
-            toast.error('Phone must be exactly 10 digits (optional +91 prefix)');
-            return;
-        }
-
-        if (!passwordRegex.test(formData.password)) {
-            toast.error('Password must be at least 8 chars with 1 uppercase, 1 number, and 1 special character');
-            return;
-        }
-
         setLoading(true);
-        const success = await register({
-            ...formData,
-            phone: normalizedPhone
-        });
+        const success = await register(formData);
         setLoading(false);
         if (success) navigate('/dashboard');
     };
@@ -178,7 +180,7 @@ const Register = () => {
                                             className="w-full h-16 text-xs font-black uppercase tracking-[0.4em] rounded-2xl"
                                             onClick={() => formData.role ? setStep(2) : toast.error("Selective mandate required")}
                                         >
-                                            Next
+                                            Next Protocol
                                         </Button>
                                     </div>
                                 </motion.div>
@@ -201,7 +203,7 @@ const Register = () => {
                                         <Input
                                             id="email"
                                             type="email"
-                                            label="Email"
+                                            label="Email Address"
                                             placeholder="registry@elite.global"
                                             icon={Mail}
                                             value={formData.email}
@@ -218,7 +220,7 @@ const Register = () => {
                                                 className="w-full h-16 text-xs font-black uppercase tracking-[0.4em] rounded-2xl"
                                                 isLoading={loading}
                                             >
-                                                Request OTP
+                                                Request Authorization
                                             </Button>
                                         ) : (
                                             <motion.div
@@ -228,10 +230,10 @@ const Register = () => {
                                             >
                                                 <Input
                                                     id="otp"
-                                                    label="6-Digit Code"
+                                                    label="OTP Code"
                                                     placeholder="••••••"
                                                     value={formData.otp}
-                                                    onChange={(e) => setFormData({ ...formData, otp: e.target.value })}
+                                                    onChange={handleOTPChange}
                                                     required
                                                     maxLength={6}
                                                     className="h-14 rounded-2xl text-center font-mono text-xl tracking-[0.5em]"
@@ -241,7 +243,7 @@ const Register = () => {
                                                         Revise Role
                                                     </button>
                                                     <Button type="submit" variant="primary" className="flex-[2] h-14 rounded-2xl text-[11px] font-black uppercase tracking-[0.4em]">
-                                                        Verify OTP
+                                                        Verify Handshake
                                                     </Button>
                                                 </div>
                                             </motion.div>
@@ -271,12 +273,11 @@ const Register = () => {
                                         />
                                         <Input
                                             id="phone"
-                                            label="Phone number"
-                                            placeholder="1234567890"
+                                            label="Phone Number"
+                                            placeholder="+1 234 567 890"
                                             icon={Phone}
                                             value={formData.phone}
                                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                            required
                                             className="h-14 rounded-2xl"
                                         />
                                     </div>
@@ -307,7 +308,7 @@ const Register = () => {
                 </div>
 
                 <div className="mt-12 text-center pb-12">
-                    <p className="text-[11px] uppercase tracking-[0.4em] text-white/90 font-bold">Already part of the Website?</p>
+                    <p className="text-[11px] uppercase tracking-[0.4em] text-white/90 font-bold">Already part of the network?</p>
                     <Link to="/login" className="group inline-flex items-center gap-2 mt-4 text-[11px] uppercase tracking-[0.5em] font-black text-primary hover:text-white transition-all py-2">
                         Sign In <ChevronRight size={12} className="group-hover:translate-x-1 transition-transform" />
                     </Link>

@@ -244,6 +244,19 @@ const assignTask = async (req, res) => {
             return res.status(400).json({ message: 'Event, Volunteer, and Title are required' });
         }
 
+        // Check if volunteer is already assigned to another active event
+        const activeEvent = await Event.findOne({
+            volunteers: assignedTo,
+            _id: { $ne: eventId },
+            status: { $in: ['upcoming', 'live'] }
+        });
+
+        if (activeEvent) {
+            return res.status(400).json({ 
+                message: `Deployment Conflict: This volunteer is already mobilized for event '${activeEvent.event_name}'. Tactical protocol prevents dual assignments.` 
+            });
+        }
+
         const task = await Task.create({
             eventId,
             assignedTo,
@@ -396,21 +409,27 @@ const triggerSOS = async (req, res) => {
             timestamp: timestamp || new Date().toISOString()
         };
 
-        // Server-Side Broadcast (The most reliable way to ensure delivery)
+        // Server-Side Broadcast (Targeted delivery)
         if (req.io) {
-            console.log('REST SOS RECEIVED - BROADCASTING:', alertData);
+            console.log('REST SOS RECEIVED - TARGETING MANAGEMENT:', alertData);
             
+            const event = await Event.findById(eventId).select('event_manager_id');
+            const managerId = event?.event_manager_id;
+
             // 1. Target specific event room
             if (eventId) {
                 req.io.to(`event_${eventId}`).emit('emergency_alert', alertData);
             }
 
-            // 2. Target specific management rooms
-            req.io.to('admin_room').emit('volunteer_emergency', alertData);
-            req.io.to('manager_room').emit('volunteer_emergency', alertData);
+            // 2. Target the specific manager of this event
+            if (managerId) {
+                req.io.to(`user_${managerId}`).emit('volunteer_emergency', alertData);
+            }
 
-            // 3. Global broadcast failsafe
-            req.io.emit('broadcast_emergency', alertData);
+            // 3. Target admins for oversight
+            req.io.to('admin_room').emit('volunteer_emergency', alertData);
+
+            // 4. Global broadcast removed for optimization, only rooms notified
         }
 
         res.status(200).json({ message: 'Emergency signal processed and broadcasted' });

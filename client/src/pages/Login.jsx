@@ -47,7 +47,7 @@ const Login = () => {
                     <div className="flex flex-col items-center">
                         <Badge variant="primary" className="mb-6 px-4 py-1.5 uppercase tracking-[0.4em] font-black text-[11px] rounded-full">Secure Terminal</Badge>
                         <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight leading-none mb-4 uppercase">
-                            login <span className="text-gradient-gold-soft italic font-serif">IDENTITY.</span>
+                            login <span className="text-gradient-gold-soft italic font-serif">SECURE.</span>
                         </h1>
                         <p className="text-white/70 font-bold uppercase tracking-[0.3em] text-[11px]">
                             Gateway to High-Scale Architecture
@@ -63,7 +63,7 @@ const Login = () => {
                             <Input
                                 id="email"
                                 type="email"
-                                label="Email"
+                                label="Email Address"
                                 placeholder="registry@elite.managed"
                                 icon={Mail}
                                 value={formData.email}
@@ -71,17 +71,27 @@ const Login = () => {
                                 required
                                 className="bg-white/5 border-white/10 rounded-2xl h-14"
                             />
-                            <Input
-                                id="password"
-                                type="password"
-                                label="Password"
-                                placeholder="••••••••"
-                                icon={Lock}
-                                value={formData.password}
-                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                required
-                                className="bg-white/5 border-white/10 rounded-2xl h-14"
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    label="Password"
+                                    placeholder="••••••••"
+                                    icon={Lock}
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    required
+                                    className="bg-white/5 border-white/10 rounded-2xl h-14"
+                                />
+                                <div className="absolute right-0 -bottom-6">
+                                    <Link 
+                                        to="/forgot-password" 
+                                        className="text-[9px] uppercase tracking-widest font-black text-white/40 hover:text-primary transition-colors"
+                                    >
+                                        Forgot Password?
+                                    </Link>
+                                </div>
+                            </div>
                         </div>
 
                         <Button
@@ -96,10 +106,10 @@ const Login = () => {
 
                     <div className="mt-12 text-center pt-8 border-t border-white/5">
                         <p className="text-[11px] uppercase tracking-[0.3em] text-white/90 font-bold">
-                            New to website
+                            New to the Infrastructure?
                         </p>
                         <Link to="/register" className="group inline-flex items-center gap-2 mt-4 text-[11px] uppercase tracking-[0.4em] font-black text-primary hover:text-white transition-all">
-                            Sign up <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                            Sign Up <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                         </Link>
                     </div>
                 </div>

@@ -4,9 +4,6 @@ const User = require('../models/User');
 const Verification = require('../models/Verification');
 const sendEmail = require('../config/email');
 
-const phoneRegex = /^(?:\+91\s?)?\d{10}$/;
-const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-
 // Generate JWT
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -23,14 +20,6 @@ const sendOTP = async (req, res) => {
 
         if (!email) {
             return res.status(400).json({ message: 'Please provide an email' });
-        }
-
-        const userExists = await User.findOne({ email });
-        if (userExists) {
-            if (userExists.status === 'blocked') {
-                return res.status(403).json({ message: 'Access Denied: This email protocol has been blacklisted by system administration.' });
-            }
-            return res.status(409).json({ message: 'User already exists. Please sign in instead.' });
         }
 
         // Generate 6-digit OTP
@@ -73,15 +62,6 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'Please add all fields including OTP' });
         }
 
-        const normalizedPhone = String(phone || '').trim();
-        if (!phoneRegex.test(normalizedPhone)) {
-            return res.status(400).json({ message: 'Phone must be exactly 10 digits (optional +91 prefix)' });
-        }
-
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({ message: 'Password must be at least 8 chars with 1 uppercase, 1 number, and 1 special character' });
-        }
-
         // Verify OTP
         const verification = await Verification.findOne({ email, otp });
         if (!verification) {
@@ -104,7 +84,7 @@ const registerUser = async (req, res) => {
             email,
             password_hash: password,
             role,
-            phone: normalizedPhone,
+            phone,
             is_approved: ['Attendee', 'Client'].includes(role), // Attendees and Clients approved by default
         });
 
@@ -172,10 +152,70 @@ const getMe = async (req, res) => {
 // @access  Private
 const getAdmins = async (req, res) => {
     try {
-        const admins = await User.find({ role: 'Admin' }).select('name email role');
+        const admins = await User.find({ role: 'Admin' }).select('-password_hash');
         res.status(200).json(admins);
     } catch (error) {
         res.status(500).json({ message: 'Server Error: ' + error.message });
+    }
+};
+// @desc    Request forgot password OTP
+// @route   POST /api/auth/forgot-password
+// @access  Public
+const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found with this email' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        await Verification.findOneAndUpdate(
+            { email },
+            { otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
+            { upsert: true, new: true }
+        );
+
+        await sendEmail({
+            email,
+            subject: 'Reset Password OTP - EventFlow',
+            message: 'Your verification code for password reset is:',
+            otp
+        });
+
+        res.status(200).json({ message: 'OTP sent to your email' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error: ' + error.message });
+    }
+};
+
+// @desc    Reset password using OTP
+// @route   POST /api/auth/reset-password
+// @access  Public
+const resetPassword = async (req, res) => {
+    try {
+        const { email, otp, password } = req.body;
+
+        const verification = await Verification.findOne({ email, otp });
+        if (!verification) {
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
+        }
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.password_hash = password;
+        await user.save();
+
+        await Verification.deleteOne({ _id: verification._id });
+
+        res.status(200).json({ message: 'Password reset successful' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error: ' + error.message });
     }
 };
 
@@ -185,4 +225,6 @@ module.exports = {
     loginUser,
     getMe,
     getAdmins,
+    forgotPassword,
+    resetPassword,
 };

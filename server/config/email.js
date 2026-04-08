@@ -32,16 +32,24 @@ const sendEmail = async (options) => {
             `Subject: ${utf8Subject}`,
             '',
             `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                    <h2 style="color: #3b82f6; text-align: center;">Intelligent Event Hub</h2>
-                    <p>Hello,</p>
-                    <p>${options.message}</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #3b82f6; background: #f0f7ff; padding: 10px 20px; border-radius: 5px;">
+                <div style="background-color: #0c0c0e; color: #f5f5f5; font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: auto; padding: 40px; border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 24px; text-align: center;">
+                    <div style="margin-bottom: 30px;">
+                        <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 5px; color: #d4af37; font-weight: 900; border: 1px solid rgba(212, 175, 55, 0.3); padding: 5px 15px; border-radius: 100px;">Secure Terminal</span>
+                    </div>
+                    <h1 style="color: #ffffff; font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">Elite <span style="color: #d4af37;">Access.</span></h1>
+                    <p style="font-size: 14px; opacity: 0.8; line-height: 1.6; margin-bottom: 40px; text-transform: lowercase; letter-spacing: 1px;">Hello, the following handshake sequence has been initiated for your account. Please use the verification code below to authorize access.</p>
+                    
+                    <div style="margin: 40px 0; background: rgba(255, 255, 255, 0.03); padding: 30px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <span style="font-size: 40px; font-weight: 900; letter-spacing: 8px; color: #d4af37; text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);">
                             ${options.otp}
                         </span>
                     </div>
-                    <p style="font-size: 12px; color: #777;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+                    
+                    <p style="font-size: 11px; color: rgba(255, 255, 255, 0.4); text-transform: uppercase; letter-spacing: 2px; margin-top: 40px;">Expiring in 10 minutes • Mission Critical</p>
+                    
+                    <div style="margin-top: 50px; padding-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.05);">
+                        <p style="font-size: 9px; color: rgba(255, 255, 255, 0.3); text-transform: uppercase; letter-spacing: 3px;">© ELITE GLOBAL INFRASTRUCTURE</p>
+                    </div>
                 </div>
             `
         ];

@@ -138,24 +138,24 @@ const QRScanner = ({ onScan, onClose }) => {
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="w-full max-w-md relative z-10"
+                className="w-full max-w-md relative z-10 sm:p-0"
             >
                 <div className="app-card overflow-hidden border-primary/20 bg-zinc-950/60 shadow-[0_0_80px_rgba(0,0,0,0.6)] backdrop-blur-xl">
                     {/* Header */}
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between bg-zinc-900/60">
-                        <div className="flex items-center gap-4">
+                    <div className="p-4 md:p-6 border-b border-white/5 flex items-center justify-between bg-zinc-900/60">
+                        <div className="flex items-center gap-3">
                             <div className={`w-2 h-2 rounded-full ${isCameraActive ? 'bg-emerald-500 animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.7)]' : 'bg-red-500'}`} />
                             <div className="flex flex-col">
-                                <span className="text-xs font-black text-white uppercase tracking-[0.4em]">Ticket Scanner</span>
-                                <span className="text-[9px] font-black text-white/70 uppercase tracking-[0.2em] mt-0.5" >Scanning Ticket...</span>
+                                <span className="text-[10px] md:text-xs font-black text-white uppercase tracking-[0.4em]">Tactical Scanner</span>
+                                <span className="text-[8px] md:text-[9px] font-black text-white/70 uppercase tracking-[0.2em] mt-0.5" >Unit_Scan_Active</span>
                             </div>
                         </div>
                         <Button
                             onClick={onClose}
                             variant="ghost-luxury"
-                            className="w-10 h-10 rounded-xl p-0 flex items-center justify-center text-white/70 hover:text-white border border-white/10 group"
+                            className="w-8 h-8 md:w-10 md:h-10 rounded-xl p-0 flex items-center justify-center text-white/70 hover:text-white border border-white/10 group"
                         >
-                            <X size={20} className="group-hover:rotate-90 transition-transform" />
+                            <X size={18} className="group-hover:rotate-90 transition-transform" />
                         </Button>
                     </div>
 
@@ -268,20 +268,20 @@ const QRScanner = ({ onScan, onClose }) => {
                     </div>
 
                     {/* Footer / Controls */}
-                    <div className="p-8 bg-zinc-900/60 space-y-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-                        <div className="flex items-center gap-6 justify-center py-2">
-                            <Shield size={16} className="text-primary/70 hover:text-primary transition-colors cursor-help" />
-                            <div className="h-1.5 w-1.5 rounded-full bg-white/10" />
-                            <Zap size={16} className="text-primary/70 hover:text-primary transition-colors cursor-help" />
-                            <div className="h-1.5 w-1.5 rounded-full bg-white/10" />
-                            <Activity size={16} className="text-primary/70 hover:text-primary transition-colors cursor-help" />
+                    <div className="p-4 md:p-8 bg-zinc-900/40 space-y-4 md:space-y-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                        <div className="flex items-center gap-4 md:gap-6 justify-center py-1">
+                            <Shield size={14} className="text-primary/70" />
+                            <div className="h-1 w-1 rounded-full bg-white/10" />
+                            <Zap size={14} className="text-primary/70" />
+                            <div className="h-1 w-1 rounded-full bg-white/10" />
+                            <Activity size={14} className="text-primary/70" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-[11px] font-black text-white/90 uppercase tracking-[0.5em] text-center italic">
-                                Guest Entry Check
+                            <p className="text-[10px] font-black text-white/90 uppercase tracking-[0.5em] text-center italic">
+                                Mission: Check-In
                             </p>
-                            <p className="text-[11px] font-medium text-white/70 uppercase tracking-[0.2em] text-center">
-                                Secure scanning active
+                            <p className="text-[9px] font-medium text-white/50 uppercase tracking-[0.2em] text-center">
+                                Terminal secure
                             </p>
                         </div>
                     </div>

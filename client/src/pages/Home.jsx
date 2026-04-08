@@ -280,6 +280,45 @@ const Home = () => {
                             delay={0.4}
                         />
                     </div>
+
+                    {/* Regional Spotlight: Gujarat, India */}
+                    <div className="mt-56 p-12 md:p-24 rounded-[4rem] bg-gradient-to-br from-zinc-900 to-black border border-white/5 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 blur-[120px] rounded-full -mr-48 -mt-48 transition-all duration-1000 group-hover:bg-primary/20" />
+                        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                            <div>
+                                <div className="flex items-center gap-4 mb-10">
+                                    <Globe className="text-primary/60" size={20} />
+                                    <p className="text-[11px] uppercase tracking-[0.6em] font-black text-primary">Strategic Territory spotlight</p>
+                                </div>
+                                <h2 className="text-5xl md:text-8xl font-serif leading-[0.8] text-white tracking-tighter italic mb-10">Gujarat, <br /> India.</h2>
+                                <p className="text-white/80 max-w-xl font-medium text-lg leading-relaxed tracking-wide lowercase mb-12">
+                                    Pioneering the next frontier of event engineering in India’s industrial powerhouse. From the futuristic landscapes of GIFT City to the cultural grandeur of Ahmedabad, we are redefining the subcontinent’s event infrastructure.
+                                </p>
+                                <div className="grid grid-cols-2 gap-8 mb-12">
+                                    <div>
+                                        <p className="text-2xl font-black text-white mb-2 tracking-tighter">GIFT City</p>
+                                        <p className="text-[9px] uppercase tracking-[0.3em] font-black text-white/50">Financial Summits</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-black text-white mb-2 tracking-tighter">Ahmedabad</p>
+                                        <p className="text-[9px] uppercase tracking-[0.3em] font-black text-white/50">Heritage Galas</p>
+                                    </div>
+                                </div>
+                                <Button variant="ghost-luxury" className="px-10 h-16 rounded-2xl text-[10px] tracking-[0.4em]">Explore Region</Button>
+                            </div>
+                            <div className="relative h-[400px] md:h-[600px] rounded-[3rem] overflow-hidden group/img">
+                                <img
+                                    src="https://images.unsplash.com/photo-1590050752117-23a9d7fc21ad?q=80&w=2070&auto=format&fit=crop"
+                                    alt="Gujarat Infrastructure"
+                                    className="w-full h-full object-cover grayscale opacity-40 group-hover/img:scale-110 group-hover/img:grayscale-0 group-hover/img:opacity-80 transition-all duration-1000"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+                                <div className="absolute bottom-10 left-10">
+                                    <p className="text-[10px] font-black tracking-[0.5em] text-white/70 uppercase">Unit Alpha-07 • Gujarat Division</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 {/* Testimony */}
@@ -335,7 +374,7 @@ const Home = () => {
                                 Setting the global standard for luxury event architecture across four continents since 2012.
                             </p>
                         </div>
-                        <div className="grid grid-cols-2 gap-16">
+                        {/* <div className="grid grid-cols-2 gap-16">
                             <div>
                                 <p className="text-[11px] text-primary/60 mb-10 font-black uppercase tracking-[0.5em]">Network Nodes</p>
                                 <ul className="space-y-6 text-[11px] text-white/70 font-black tracking-widest uppercase">
@@ -353,7 +392,7 @@ const Home = () => {
                                     <li className="hover:text-white transition-colors cursor-pointer">Dispatch</li>
                                 </ul>
                             </div>
-                        </div>
+                        </div> */}
                     </div>
                     <div className="flex flex-col md:flex-row justify-between items-center pt-20 border-t border-white/5 gap-10 opacity-30">
                         <p className="text-[9px] text-white tracking-[1em] uppercase font-black">© ELITE GLOBAL INFRASTRUCTURE.</p>
