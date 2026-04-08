@@ -4,7 +4,11 @@ from dotenv import load_dotenv
 import os
 from rag_chatbot import EventRAGChatbot
 
-load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+root_env_path = os.path.join(os.path.dirname(__file__), '.env')
+server_env_path = os.path.join(os.path.dirname(__file__), 'server', '.env')
+load_dotenv(root_env_path)
+if os.path.exists(server_env_path):
+    load_dotenv(server_env_path, override=False)
 
 # Initialize Flask App
 app = Flask(__name__)
@@ -17,10 +21,12 @@ CORS(app)
 # Initialize the Chatbot
 # Ensure the MongoDB URI and Gemini model match what you used in main.py
 print("Initializing Chatbot...")
+mongo_uri = os.getenv('MONGO_URI', 'mongodb://localhost:27017/')
 chatbot = EventRAGChatbot(
-    mongo_uri="mongodb+srv://meetdhola28_db_user:wPPHdFtKiVYneQ7c@cluster0.sleva32.mongodb.net/", 
+    mongo_uri=mongo_uri,
     gemini_model=os.getenv('GEMINI_MODEL', 'models/gemini-2.0-flash')
 )
+print(f"Chatbot Mongo source configured: {'MONGO_URI' if os.getenv('MONGO_URI') else 'fallback mongodb://localhost:27017/'}")
 
 # Build the knowledge base when the server starts
 try:
@@ -47,7 +53,7 @@ def chat():
     try:
         # Pass the question to the RAG chatbot and get the answer
         print(f"Received question: {question}")
-        answer = chatbot.ask_question(question)
+        answer = chatbot.ask_attendee_question(question)
         
         # Return the answer as JSON
         return jsonify({"answer": answer}), 200
@@ -117,6 +123,39 @@ def manager_comparison():
             budget_suggestion
         ]
     }), 200
+
+
+@app.route('/api/manager/chat-optimize', methods=['POST'])
+def manager_chat_optimize():
+    """
+    Python-backed manager assistant with RAG grounding and optimization output.
+    Expects JSON:
+    {
+      "question": "optimize my event logistics",
+      "eventId": "<mongo_event_id>"
+    }
+    Returns:
+    {
+      "message": "...",
+      "action": "READINESS_UPDATE|BUDGET_SUMMARY|SUGGEST_RESOURCE|null",
+      "data": {...},
+      "confidence": "high|medium|low"
+    }
+    """
+    data = request.json or {}
+    question = (data.get('question') or '').strip()
+    event_id = (data.get('eventId') or '').strip()
+
+    if not question:
+        return jsonify({'message': 'Question is required'}), 400
+    if not event_id:
+        return jsonify({'message': 'eventId is required'}), 400
+
+    try:
+        result = chatbot.ask_manager_question(question, event_id)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'message': f'Manager assistant error: {str(e)}'}), 500
 
 if __name__ == '__main__':
     # Start the Flask development server on port 5000

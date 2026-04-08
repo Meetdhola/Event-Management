@@ -32,7 +32,7 @@ const detectIntent = (command = '') => {
         return { type: 'budget' };
     }
 
-    if (cmd.includes('status') || cmd.includes('ready') || cmd.includes('progress') || cmd.includes('organize') || cmd.includes('optimize') || cmd.includes('important') || cmd.includes('missing') || cmd.includes('remove') || cmd.includes('improve')) {
+    if (cmd.includes('status') || cmd.includes('ready') || cmd.includes('progress') || cmd.includes('organize') || cmd.includes('optimize') || cmd.includes('important') || cmd.includes('missing') || cmd.includes('remove') || cmd.includes('improve') || cmd.includes('add')) {
         return { type: 'readiness' };
     }
 
@@ -104,7 +104,12 @@ const scoreResource = (resource, queryTokens, intentCategory) => {
 
 const buildReadinessSummary = (event) => {
     const keyCategories = ['Security', 'Logistics', 'Audio/Visual', 'Technical', 'Food'];
-    const inPlan = new Set(event.logistics_cart.map((item) => item.resource?.category).filter(Boolean));
+    const inPlan = new Set(
+        event.logistics_cart
+            .filter((item) => Number(item.quantity || 0) > 0)
+            .map((item) => item.resource?.category)
+            .filter(Boolean)
+    );
     const covered = keyCategories.filter((c) => inPlan.has(c));
     const missing = keyCategories.filter((c) => !inPlan.has(c));
 
@@ -152,8 +157,10 @@ const buildPriorityOptimization = (event) => {
     for (const item of event.logistics_cart || []) {
         const cat = item.resource?.category;
         if (!cat) continue;
+        const qty = Number(item.quantity || 0);
+        if (qty <= 0) continue;
         const prev = categoriesInPlan.get(cat) || 0;
-        categoriesInPlan.set(cat, prev + (item.quantity || 0));
+        categoriesInPlan.set(cat, prev + qty);
     }
 
     const { critical, medium } = getPriorityMatrixByEventType(event.event_type);
@@ -527,6 +534,34 @@ const processCommand = async (req, res) => {
             return res.status(404).json({ message: 'Event not found' });
         }
 
+        // Primary path: Python RAG manager assistant (grounded + optimization aware)
+        try {
+            const pythonBase = process.env.PYTHON_API_URL || 'http://localhost:5000';
+            const pyRes = await fetch(`${pythonBase}/api/manager/chat-optimize`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: command,
+                    eventId
+                })
+            });
+
+            if (pyRes.ok) {
+                const pyData = await pyRes.json();
+                if (pyData && typeof pyData.message === 'string') {
+                    return res.status(200).json({
+                        message: pyData.message,
+                        action: pyData.action || null,
+                        data: pyData.data || null,
+                        confidence: pyData.confidence || 'medium',
+                        source: 'python-rag'
+                    });
+                }
+            }
+        } catch (pyError) {
+            // Silent fallback to existing JS logic below.
+        }
+
         const cmd = command.toLowerCase();
         const intent = detectIntent(cmd);
         const queryTokens = tokenize(command);
@@ -844,13 +879,17 @@ const executeAction = async (req, res) => {
         if (!event) return res.status(404).json({ message: 'Event not found' });
 
         if (action === 'SUGGEST_RESOURCE') {
-            const resource = data.resourceId
-                ? await Resource.findById(data.resourceId)
-                : await Resource.findOne({ category: data.category });
+            const suggested = data?.recommended_resource || {};
+            const resourceId = data?.resourceId || suggested?.resourceId;
+            const resourceCategory = data?.category || suggested?.category;
+
+            const resource = resourceId
+                ? await Resource.findById(resourceId)
+                : await Resource.findOne({ category: resourceCategory, is_available: true });
 
             if (!resource) return res.status(404).json({ message: 'Compatible resource not found' });
 
-            const qtyToAdd = Math.max(1, Number(data.needed) || 1);
+            const qtyToAdd = Math.max(1, Number(data?.needed || suggested?.needed) || 1);
 
             // Check if resource already in cart
             const cartIndex = event.logistics_cart.findIndex(item => item.resource.toString() === resource._id.toString());
@@ -868,6 +907,52 @@ const executeAction = async (req, res) => {
 
             await event.save();
             return res.status(200).json({ message: `Successfully added ${qtyToAdd} ${resource.name} to logistics plan.`, event });
+        }
+
+        if (action === 'BULK_OPTIMIZE') {
+            const plan = Array.isArray(data?.optimization_plan) ? data.optimization_plan : [];
+            if (plan.length === 0) {
+                return res.status(400).json({ message: 'No optimization plan found to execute' });
+            }
+
+            const applied = [];
+            const skipped = [];
+
+            for (const item of plan) {
+                const resourceId = item?.resourceId;
+                const category = item?.category;
+                const qtyToAdd = Math.max(1, Number(item?.needed) || 1);
+
+                const resource = resourceId
+                    ? await Resource.findById(resourceId)
+                    : await Resource.findOne({ category, is_available: true });
+
+                if (!resource) {
+                    skipped.push(category || 'Unknown');
+                    continue;
+                }
+
+                const cartIndex = event.logistics_cart.findIndex((cartItem) => cartItem.resource.toString() === resource._id.toString());
+
+                if (cartIndex > -1) {
+                    event.logistics_cart[cartIndex].quantity += qtyToAdd;
+                    event.logistics_cart[cartIndex].resource_price_at_booking = resource.base_price;
+                } else {
+                    event.logistics_cart.push({
+                        resource: resource._id,
+                        quantity: qtyToAdd,
+                        resource_price_at_booking: resource.base_price
+                    });
+                }
+
+                applied.push(`${resource.name} (+${qtyToAdd})`);
+            }
+
+            await event.save();
+
+            const appliedMsg = applied.length ? `Applied: ${applied.join(', ')}.` : 'No resources were applied.';
+            const skippedMsg = skipped.length ? ` Skipped (not found): ${skipped.join(', ')}.` : '';
+            return res.status(200).json({ message: `${appliedMsg}${skippedMsg}`, event, applied, skipped });
         }
 
         res.status(400).json({ message: 'Action type not supported yet' });

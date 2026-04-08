@@ -908,7 +908,7 @@ const AttendeeDashboard = () => {
                                 className="w-[92vw] max-w-md mb-3 app-card p-5 border border-white/10 rounded-2xl bg-zinc-950/95 backdrop-blur-xl space-y-4 shadow-2xl"
                             >
                                 <div className="flex items-center justify-between">
-                                    <h2 className="text-[11px] font-black text-white/90 uppercase tracking-[0.4em]">Attendee AI</h2>
+                                    <h2 className="text-[12px] font-black text-white/90 uppercase tracking-[0.28em]">Attendee AI</h2>
                                     <button
                                         type="button"
                                         onClick={() => setShowAiWidget(false)}
@@ -917,25 +917,40 @@ const AttendeeDashboard = () => {
                                         <X size={14} />
                                     </button>
                                 </div>
+                                <p className="text-[11px] text-white/65 font-black uppercase tracking-[0.16em]">
+                                    Ask event name, venue, date, status, or audience.
+                                </p>
                                 <form onSubmit={handleAskAnything} className="flex items-center gap-3">
                                     <input
                                         type="text"
                                         value={aiQuestion}
                                         onChange={(e) => setAiQuestion(e.target.value)}
-                                        placeholder="ASK ANYTHING HERE"
-                                        className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl py-3 px-4 text-[11px] font-black uppercase tracking-widest text-white placeholder:text-white/70 focus:outline-none focus:border-primary/40 transition-all"
+                                        placeholder="Ask about your event..."
+                                        className="flex-1 bg-white/[0.03] border border-white/10 rounded-xl py-3 px-4 text-[12px] font-black uppercase tracking-[0.12em] text-white placeholder:text-white/70 focus:outline-none focus:border-primary/40 transition-all"
                                     />
                                     <Button
                                         type="submit"
                                         disabled={aiLoading || !aiQuestion.trim()}
                                         variant="luxury"
-                                        className="h-11 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                                        className="h-11 px-4 rounded-xl text-[11px] font-black uppercase tracking-[0.16em] disabled:opacity-50"
                                     >
                                         {aiLoading ? 'Asking...' : 'Ask'}
                                     </Button>
                                 </form>
+                                <div className="flex flex-wrap gap-2">
+                                    {['UDAAN event details', 'next event date', 'event venue'].map((q) => (
+                                        <button
+                                            key={q}
+                                            type="button"
+                                            onClick={() => setAiQuestion(q)}
+                                            className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-[10px] font-black uppercase tracking-[0.1em] text-white/80 hover:text-primary hover:border-primary/20 transition-all"
+                                        >
+                                            {q}
+                                        </button>
+                                    ))}
+                                </div>
                                 {aiAnswer && (
-                                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 text-[11px] text-white/90 leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">
+                                    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 text-[12px] text-white/90 leading-relaxed max-h-56 overflow-y-auto custom-scrollbar">
                                         {aiAnswer}
                                     </div>
                                 )}

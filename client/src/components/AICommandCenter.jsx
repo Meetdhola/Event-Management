@@ -124,6 +124,23 @@ const AICommandCenter = ({ eventId }) => {
             });
             toast.success(res.data.message);
             setMessages(prev => [...prev, { role: 'assistant', text: `Optimization applied successfully: ${res.data.message}` }]);
+
+            // Auto-recheck readiness after optimization so user sees updated overall status.
+            try {
+                const statusRes = await axios.post('/ai/command', {
+                    command: 'status overview',
+                    eventId: resolvedEventId
+                });
+                setMessages(prev => [...prev, {
+                    role: 'assistant',
+                    text: statusRes.data.message,
+                    action: statusRes.data.action,
+                    data: statusRes.data.data
+                }]);
+            } catch {
+                // Keep UX resilient even if status refresh fails.
+            }
+
             if (window.dispatchEvent) {
                 window.dispatchEvent(new CustomEvent('logisticsUpdate'));
             }
@@ -146,6 +163,18 @@ const AICommandCenter = ({ eventId }) => {
                         className="w-full h-10 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20"
                     >
                         Apply Optimization
+                    </Button>
+                </div>
+            );
+            case 'BULK_OPTIMIZE': return (
+                <div className="flex flex-col gap-3">
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-amber-500 uppercase"><AlertCircle size={10} /> Full Optimization Needed</span>
+                    <Button
+                        onClick={() => handleExecute(index)}
+                        variant="luxury"
+                        className="w-full h-10 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20"
+                    >
+                        Apply Full Optimization
                     </Button>
                 </div>
             );

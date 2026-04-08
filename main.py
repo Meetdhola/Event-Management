@@ -11,7 +11,7 @@ def main():
     # Replace the mongo_uri with your actual MongoDB connection string
     # If using an LLM like Gemini, pass the model name.
     chatbot = EventRAGChatbot(
-        mongo_uri="mongodb+srv://meetdhola28_db_user:wPPHdFtKiVYneQ7c@cluster0.sleva32.mongodb.net/", 
+        mongo_uri=os.getenv('MONGO_URI', 'mongodb://localhost:27017/'),
         gemini_model=os.getenv('GEMINI_MODEL', 'models/gemini-2.0-flash')
     )
     
