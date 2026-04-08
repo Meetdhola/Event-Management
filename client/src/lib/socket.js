@@ -3,7 +3,10 @@ import { SOCKET_URL } from '../apiConfig';
 
 export const socket = io(SOCKET_URL, {
     withCredentials: true,
-    transports: ['websocket', 'polling']
+    transports: ['polling', 'websocket'],
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000
 });
 
 export const joinRoom = (room) => {

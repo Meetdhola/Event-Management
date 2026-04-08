@@ -17,7 +17,10 @@ const io = new Server(server, {
     cors: {
         origin: true,
         credentials: true
-    }
+    },
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    connectTimeout: 45000
 });
 
 // Request logger
