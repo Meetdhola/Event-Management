@@ -158,6 +158,6 @@ def manager_chat_optimize():
         return jsonify({'message': f'Manager assistant error: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    # Start the Flask development server on port 5000
-    print("=== Chatbot API is starting on http://localhost:5000 ===")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Start the Flask development server on port 5005
+    print("=== Chatbot API is starting on http://localhost:5005 ===")
+    app.run(host='0.0.0.0', port=5005, debug=True)

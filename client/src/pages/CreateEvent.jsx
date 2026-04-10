@@ -59,6 +59,10 @@ const CreateEvent = () => {
                 toast.error('Please fill all logistics details');
                 return;
             }
+            if (new Date(end_date) < new Date(start_date)) {
+                toast.error('Conclusion date cannot be earlier than Commencement date.');
+                return;
+            }
             setStep(3);
             return;
         }

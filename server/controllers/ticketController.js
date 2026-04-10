@@ -65,7 +65,7 @@ const getMyTickets = async (req, res) => {
                 { "attendees.email": userEmail }
             ]
         })
-            .populate('event_id', 'event_name venue start_date image');
+            .populate('event_id', 'event_name venue start_date end_date image');
         res.status(200).json(tickets);
     } catch (error) {
         res.status(500).json({ message: 'Server Error', error: error.message });

@@ -24,7 +24,8 @@ import { Badge, Card, Button, Input } from '../components/ui/Components';
 import { toast } from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
 import { socket } from '../lib/socket';
-import { AlertTriangle, Clock, MessageSquare, Send } from 'lucide-react';
+import { AlertTriangle, Clock, MessageSquare, Send, Bot, BrainCircuit } from 'lucide-react';
+import AttendeeAiAssistant from '../components/AttendeeAiAssistant';
 
 const LiveCountdown = ({ targetDate, eventName }) => {
     const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
@@ -53,8 +54,8 @@ const LiveCountdown = ({ targetDate, eventName }) => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="app-card relative overflow-hidden bg-zinc-950 p-8 md:p-10 border border-primary/20 shadow-[0_20px_50px_rgba(212,175,55,0.15)] group">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.15),transparent_50%)] pointer-events-none" />
             <div className="absolute top-0 right-10 w-[1px] h-full bg-gradient-to-b from-transparent via-primary/20 to-transparent max-md:hidden" />
-            
-            <div className="flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
+
+            <div className="flex flex-wrap md:flex-row justify-center items-center gap-10 relative z-10">
                 <div className="text-center md:text-left flex-1">
                     <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
                         <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shadow-glow" />
@@ -63,13 +64,15 @@ const LiveCountdown = ({ targetDate, eventName }) => {
                     <h2 className="text-3xl md:text-4xl font-serif text-white uppercase italic tracking-widest">{eventName}</h2>
                 </div>
 
-                <div className="flex gap-4 sm:gap-6">
+                <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
                     {Object.entries(timeLeft).map(([unit, value]) => (
                         <div key={unit} className="flex flex-col items-center">
-                            <span className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 tracking-widest tabular-nums w-14 sm:w-20 text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                                {value.toString().padStart(2, '0')}
-                            </span>
-                            <span className="text-[9px] uppercase tracking-[0.5em] text-primary/70 font-black mt-2">{unit === 'd' ? 'Days' : unit === 'h' ? 'Hours' : unit === 'm' ? 'Mins' : 'Secs'}</span>
+                            <div className="h-[80px] sm:h-[110px] min-w-[80px] sm:min-w-[110px] px-2 bg-white/10 border-t border-l border-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-xl mb-3">
+                                <span className="text-5xl sm:text-[4rem] sm:leading-none font-bold text-white drop-shadow-lg">
+                                    {value.toString().padStart(2, '0')}
+                                </span>
+                            </div>
+                            <span className="text-[12px] sm:text-[15px] text-white/80 font-medium tracking-wide">{unit === 'd' ? 'Days' : unit === 'h' ? 'Hours' : unit === 'm' ? 'Minutes' : 'Seconds'}</span>
                         </div>
                     ))}
                 </div>
@@ -95,18 +98,25 @@ const AttendeeDashboard = () => {
     const [isReporting, setIsReporting] = useState(false);
     const [reportForm, setReportForm] = useState({ location: '', status: 'Normal', message: '' });
 
-    const upcomingTickets = tickets.filter(t => new Date(t.event_id?.end_date || t.event_id?.start_date) > new Date()).sort((a,b) => new Date(a.event_id?.start_date) - new Date(b.event_id?.start_date));
-    const pastTickets = tickets.filter(t => new Date(t.event_id?.end_date || t.event_id?.start_date) <= new Date()).sort((a,b) => new Date(b.event_id?.start_date) - new Date(a.event_id?.start_date));
-    const nextTicket = upcomingTickets.length > 0 ? upcomingTickets[0] : null;
-
     const getEventStatus = (event) => {
         const now = new Date();
         const start = new Date(event.start_date);
-        const end = new Date(event.end_date);
-        if (now > end) return { label: 'Completed', color: 'text-white/40 bg-white/5 border-white/10' };
-        if (now >= start && now <= end) return { label: 'Ongoing', color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' };
-        return { label: 'Upcoming', color: 'text-primary bg-primary/10 border-primary/20' };
+        let end = event.end_date ? new Date(event.end_date) : new Date(start);
+
+        if (isNaN(end.getTime()) || !event.end_date) {
+            end.setHours(23, 59, 59, 999);
+        }
+
+        const daysSinceStart = (now - start) / (1000 * 60 * 60 * 24);
+        if (now > end || daysSinceStart > 7) return { label: 'Completed', color: 'text-white/40 bg-white/5 border-white/10' };
+
+        if (now < start) return { label: 'Upcoming', color: 'text-primary bg-primary/10 border-primary/20' };
+        return { label: 'Ongoing', color: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' };
     };
+
+    const upcomingTickets = tickets.filter(t => t.event_id && getEventStatus(t.event_id).label !== 'Completed').sort((a, b) => new Date(a.event_id?.start_date) - new Date(b.event_id?.start_date));
+    const pastTickets = tickets.filter(t => t.event_id && getEventStatus(t.event_id).label === 'Completed').sort((a, b) => new Date(b.event_id?.start_date) - new Date(a.event_id?.start_date));
+    const nextTicket = upcomingTickets.length > 0 ? upcomingTickets[0] : null;
 
     useEffect(() => {
         fetchAttendeeData();
@@ -116,9 +126,9 @@ const AttendeeDashboard = () => {
         if (nextTicket?.event_id?._id) {
             const eventId = nextTicket.event_id._id;
             fetchCrowdReports(eventId);
-            
+
             socket.emit('join_room', `event_${eventId}`);
-            
+
             const handleUpdate = (newReport) => {
                 setCrowdReports(prev => [newReport, ...prev].slice(0, 20));
                 toast(`New Crowd Alert: ${newReport.location} is ${newReport.status}`, {
@@ -191,10 +201,23 @@ const AttendeeDashboard = () => {
         if (!bookingEvent) return;
 
         // Validate all attendees
-        const isValid = attendees.every(a => a.name.trim() && a.email.trim() && a.phone.trim());
-        if (!isValid) {
-            toast.error('Please fill all attendee details');
-            return;
+        for (let i = 0; i < attendees.length; i++) {
+            const a = attendees[i];
+            if (!a.name.trim() || !a.email.trim() || !a.phone.trim()) {
+                toast.error(`Please fill all details for Attendee ${i + 1}`);
+                return;
+            }
+            // Strict Email Validation
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email)) {
+                toast.error(`Invalid formatting: Check the email address for Attendee ${i + 1}`);
+                return;
+            }
+            // Strict Phone Validation (Only digits and optional + prefix, length 10-15)
+            const cleanPhone = a.phone.replace(/[\s-]/g, ''); // Strip spaces and dashes
+            if (!/^\+?\d{10,15}$/.test(cleanPhone)) {
+                toast.error(`Invalid formatting: Mobile number must contain 10-15 digits (no alphabets) for Attendee ${i + 1}`);
+                return;
+            }
         }
 
         setIsBooking(true);
@@ -235,18 +258,18 @@ const AttendeeDashboard = () => {
     };
 
     const upcomingEvents = events.filter(e => {
-        const isPast = new Date(e.end_date || e.start_date) <= new Date();
+        const isPast = getEventStatus(e).label === 'Completed';
         const matchesSearch = e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                             e.venue.toLowerCase().includes(searchQuery.toLowerCase());
+            e.venue.toLowerCase().includes(searchQuery.toLowerCase());
         return !isPast && matchesSearch;
-    }).sort((a,b) => new Date(a.start_date) - new Date(b.start_date));
+    }).sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
 
     const pastEvents = events.filter(e => {
-        const isPast = new Date(e.end_date || e.start_date) <= new Date();
+        const isPast = getEventStatus(e).label === 'Completed';
         const matchesSearch = e.event_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                             e.venue.toLowerCase().includes(searchQuery.toLowerCase());
+            e.venue.toLowerCase().includes(searchQuery.toLowerCase());
         return isPast && matchesSearch;
-    }).sort((a,b) => new Date(b.start_date) - new Date(a.start_date));
+    }).sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
 
     if (loading) {
         return (
@@ -293,8 +316,8 @@ const AttendeeDashboard = () => {
                 <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/5">
                     {[
                         { id: 'explore', label: 'Discover', icon: Compass },
-                        { id: 'vault', label: 'My Vault', icon: Ticket },
-                        { id: 'live', label: 'Live Status', icon: Activity }
+                        { id: 'vault', label: 'Vault', icon: Ticket },
+                        { id: 'live', label: 'Status', icon: Activity }
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -342,7 +365,7 @@ const AttendeeDashboard = () => {
                                                 className="relative app-card flex flex-col bg-zinc-950/80 border border-white/5 rounded-[2rem] overflow-hidden group hover:border-primary/20 transition-all shadow-2xl"
                                             >
                                                 <div className="absolute inset-0 bg-gradient-to-tl from-primary/5 via-transparent to-zinc-900/50 opacity-0 group-hover:opacity-100 transition-opacity z-0" />
-                                                
+
                                                 <div className="p-8 relative z-10 flex flex-col items-center text-center">
                                                     <div className="mb-6 flex gap-3 items-center">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -351,7 +374,7 @@ const AttendeeDashboard = () => {
                                                         </span>
                                                     </div>
                                                     <h3 className="text-2xl sm:text-3xl font-serif text-white uppercase italic tracking-widest mb-8 text-glow-gold transition-all duration-500">{event.event_name || 'Premium Activation'}</h3>
-                                                    
+
                                                     <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-10 text-[11px] text-white/80 font-black uppercase tracking-widest bg-white/[0.02] px-8 py-4 rounded-xl border border-white/5">
                                                         <span className="flex items-center gap-3"><Calendar size={14} className="text-primary/70" /> {new Date(event.start_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                                                         <span className="hidden sm:block text-white/20">|</span>
@@ -440,16 +463,21 @@ const AttendeeDashboard = () => {
                                                     animate={{ opacity: 1, x: 0 }}
                                                     transition={{ delay: index * 0.05 }}
                                                     onClick={() => setSelectedTicket(ticket)}
-                                                    className="app-card relative flex flex-col md:flex-row bg-zinc-950/80 border border-white/5 rounded-2xl overflow-hidden group hover:border-primary/30 transition-all cursor-pointer shadow-xl"
+                                                    className="app-card relative flex flex-col md:flex-row md:flex-nowrap bg-zinc-950/80 border border-white/5 rounded-2xl overflow-hidden group hover:border-primary/30 transition-all cursor-pointer shadow-xl"
                                                 >
-                                                    <div className="p-6 md:p-8 flex-1 flex flex-col sm:flex-row items-start sm:items-center gap-6 md:border-r border-dashed border-white/10 group-hover:border-primary/30 transition-colors">
+                                                    {/* Stub circles */}
+                                                    <div className="absolute top-1/2 -translate-y-1/2 left-[calc(100%-192px)] hidden md:block z-20">
+                                                        <div className="absolute -top-[10px] -translate-y-full left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-background border border-white/5 group-hover:border-primary/20 transition-colors" />
+                                                        <div className="absolute -bottom-[10px] translate-y-full left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-background border border-white/5 group-hover:border-primary/20 transition-colors" />
+                                                    </div>
+                                                    <div className="p-6 md:p-8 flex-1 min-w-0 flex flex-col sm:flex-row items-start sm:items-center gap-6 md:border-r border-dashed border-white/10 group-hover:border-primary/30 transition-colors z-10">
                                                         <div className="w-16 h-16 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-background transition-all shadow-glow flex-shrink-0">
                                                             <QrCode size={28} />
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-3 mb-2">
-                                                                <p className="text-xl font-serif uppercase tracking-widest text-white italic truncate">{ticket.event_id?.event_name || 'Authorized Entry'}</p>
-                                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${status.color}`}>
+                                                        <div className="flex-1 min-w-0 overflow-hidden">
+                                                            <div className="flex items-center gap-3 mb-2 min-w-0 w-full">
+                                                                <p className="text-xl font-serif uppercase tracking-widest text-white italic truncate min-w-0">{ticket.event_id?.event_name || 'Authorized Entry'}</p>
+                                                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border shrink-0 ${status.color}`}>
                                                                     {status.label}
                                                                 </span>
                                                             </div>
@@ -466,12 +494,12 @@ const AttendeeDashboard = () => {
                                                         </div>
                                                     </div>
 
-                                                    <div className="p-6 md:p-8 md:w-40 flex items-center justify-between md:justify-center bg-zinc-900/50">
-                                                        <div className="flex flex-col items-start md:items-center text-left md:text-center">
-                                                            <span className="text-[9px] text-white/50 font-black uppercase tracking-[0.3em] mb-2">Ticket ID</span>
-                                                            <span className="text-[13px] font-mono font-black text-white tracking-widest">{ticket._id.slice(-6).toUpperCase()}</span>
+                                                    <div className="p-6 md:p-8 md:w-48 shrink-0 flex items-center justify-between md:justify-center bg-zinc-900/50">
+                                                        <div className="flex flex-col items-start md:items-center text-left md:text-center min-w-0 w-full overflow-hidden">
+                                                            <span className="text-[9px] text-white/50 font-black uppercase tracking-[0.3em] mb-2 truncate">Ticket ID</span>
+                                                            <span className="text-[13px] font-mono font-black text-white tracking-widest truncate">{ticket._id.slice(-6).toUpperCase()}</span>
                                                         </div>
-                                                        <ChevronRight size={20} className="text-white/30 group-hover:text-primary transition-transform group-hover:translate-x-1 md:hidden" />
+                                                        <ChevronRight size={20} className="text-white/30 group-hover:text-primary transition-transform group-hover:translate-x-1 md:hidden shrink-0 ml-4" />
                                                     </div>
                                                 </motion.div>
                                             );
@@ -514,7 +542,7 @@ const AttendeeDashboard = () => {
                                 </section>
                             )}
                         </motion.div>
-                    ) : (
+                    ) : activeTab === 'live' ? (
                         <motion.div key="live" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
                             <div className="flex items-center justify-between px-1">
                                 <h2 className="text-[11px] font-black text-white/90 uppercase tracking-[0.4em]">Live Updates</h2>
@@ -549,21 +577,19 @@ const AttendeeDashboard = () => {
                                             transition={{ delay: index * 0.05 }}
                                             className="app-card p-6 bg-zinc-950 border border-white/5 rounded-2xl relative overflow-hidden group"
                                         >
-                                            <div className={`absolute top-0 left-0 w-1 h-full ${
-                                                report.status === 'Very Crowded' ? 'bg-red-500' : 
+                                            <div className={`absolute top-0 left-0 w-1 h-full ${report.status === 'Very Crowded' ? 'bg-red-500' :
                                                 report.status === 'Crowded' ? 'bg-amber-500' : 'bg-emerald-500'
-                                            }`} />
-                                            
+                                                }`} />
+
                                             <div className="flex justify-between items-start mb-4">
                                                 <div>
                                                     <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] block mb-1">Area / Gate</span>
                                                     <h4 className="text-lg font-serif italic text-white tracking-widest uppercase">{report.location}</h4>
                                                 </div>
-                                                <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest ${
-                                                    report.status === 'Very Crowded' ? 'text-red-400 border-red-400/20 bg-red-400/5' : 
-                                                    report.status === 'Crowded' ? 'text-amber-400 border-amber-400/20 bg-amber-400/5' : 
-                                                    'text-emerald-400 border-emerald-400/20 bg-emerald-400/5'
-                                                }`}>
+                                                <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest ${report.status === 'Very Crowded' ? 'text-red-400 border-red-400/20 bg-red-400/5' :
+                                                    report.status === 'Crowded' ? 'text-amber-400 border-amber-400/20 bg-amber-400/5' :
+                                                        'text-emerald-400 border-emerald-400/20 bg-emerald-400/5'
+                                                    }`}>
                                                     {report.status}
                                                 </Badge>
                                             </div>
@@ -592,7 +618,7 @@ const AttendeeDashboard = () => {
                                 </div>
                             )}
                         </motion.div>
-                    )}
+                    ) : null}
                 </AnimatePresence>
 
                 {/* Ticket Display Portal */}
@@ -613,13 +639,15 @@ const AttendeeDashboard = () => {
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50 shadow-glow" />
-                                <div className="p-10 flex flex-col items-center">
-                                    <button onClick={() => setSelectedTicket(null)} className="absolute top-8 right-8 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/80 hover:text-white transition-all"><X size={20} /></button>
+                                <div className="pt-24 pb-10 px-10 flex flex-col items-center">
+                                    <button onClick={() => setSelectedTicket(null)} className="absolute top-10 right-10 w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/80 hover:text-white transition-all z-30"><X size={20} /></button>
 
-                                    <div className="mt-4 mb-4 text-center">
-                                        <div className="text-[11px] font-black text-primary uppercase tracking-[0.5em] mb-4">Entry Verified • Level 1 Access</div>
+                                    <div className="mb-8 text-center px-4 relative z-20">
+                                        <div className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-6 leading-relaxed">
+                                            Entry Verified • Level 1 Access
+                                        </div>
                                         <h2 className="text-2xl font-serif text-white tracking-widest uppercase italic leading-tight">{selectedTicket.event_id?.event_name}</h2>
-                                        
+
                                         <div className="flex items-center justify-center gap-3 mt-6 text-[10px] font-black text-white/60 uppercase tracking-widest bg-white/5 py-3 px-6 rounded-2xl border border-white/5">
                                             <Calendar size={12} className="text-primary" />
                                             <span>{new Date(selectedTicket.event_id?.start_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
@@ -838,11 +866,10 @@ const AttendeeDashboard = () => {
                                                 <button
                                                     key={lvl}
                                                     onClick={() => setReportForm({ ...reportForm, status: lvl })}
-                                                    className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
-                                                        reportForm.status === lvl 
-                                                        ? 'bg-primary text-background border-primary shadow-glow' 
+                                                    className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${reportForm.status === lvl
+                                                        ? 'bg-primary text-background border-primary shadow-glow'
                                                         : 'bg-white/[0.02] text-white/60 border-white/5 hover:border-white/10'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {lvl}
                                                 </button>
@@ -880,6 +907,7 @@ const AttendeeDashboard = () => {
                         </motion.div>
                     )}
                 </AnimatePresence>
+                <AttendeeAiAssistant />
             </div>
         </div>
     );

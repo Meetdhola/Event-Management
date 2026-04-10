@@ -10,7 +10,7 @@ import google.generativeai as genai
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 class EventRAGChatbot:
-    def __init__(self, mongo_uri="mongodb://localhost:27017/", gemini_model="models/gemini-2.0-flash", gemini_api_key=None):
+    def __init__(self, mongo_uri="mongodb+srv://meetdhola28_db_user:wPPHdFtKiVYneQ7c@cluster0.sleva32.mongodb.net/", gemini_model="models/gemini-2.0-flash", gemini_api_key=None):
         """
         Initializes the RAG Chatbot.
         - Connects to MongoDB as READ-ONLY conceptually.
@@ -18,7 +18,7 @@ class EventRAGChatbot:
         - Initializes an empty FAISS index for vector storage.
         """
         # 1. MongoDB Setup
-        self.client = MongoClient(mongo_uri)
+        self.client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
         self.db = self._resolve_database()
         print(f"Using MongoDB database for RAG: {self.db.name}")
         self.sentiment_analyzer = SentimentIntensityAnalyzer()
@@ -55,29 +55,9 @@ class EventRAGChatbot:
         }
 
     def _resolve_database(self):
-        preferred_db = os.getenv("MONGO_DB_NAME")
-        if preferred_db:
-            return self.client[preferred_db]
-
-        try:
-            default_db = self.client.get_default_database()
-            if default_db is not None:
-                return default_db
-        except Exception:
-            pass
-
-        # Prefer a DB that actually has events collection with records.
-        for db_name in self.client.list_database_names():
-            if db_name in {"admin", "local", "config"}:
-                continue
-            candidate = self.client[db_name]
-            if "events" in candidate.list_collection_names():
-                if candidate["events"].count_documents({}) > 0:
-                    return candidate
-
-        # Fallbacks
-        if "test" in self.client.list_database_names():
-            return self.client["test"]
+        """
+        Explicitly resolving the 'test' database as requested.
+        """
         return self.client["test"]
 
     def _extract_response_text(self, result):
@@ -304,7 +284,7 @@ class EventRAGChatbot:
         self.index.add(np.array(embeddings).astype('float32'))
         print("Knowledge base built successfully!")
 
-    def retrieve_context(self, question, top_k=3):
+    def retrieve_context(self, question, top_k=20):
         """
         Searches the FAISS vector database for the most relevant events.
         """
@@ -339,8 +319,8 @@ class EventRAGChatbot:
         if self.index.ntotal == 0:
             return "No event data is available right now. Please check MongoDB connection and event records."
 
-        # 1. Retrieve strict context from the Vector DB
-        context = self.retrieve_context(question)
+        # 1. Retrieve strict context from the Vector DB (increased top_k for better date matching)
+        context = self.retrieve_context(question, top_k=20)
 
         # 2. Construct the prompt ensuring the AI ONLY uses the provided database context
         system_prompt = (

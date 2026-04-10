@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Calendar, MapPin, ArrowRight, Plus, Filter, Search, MoreHorizontal, Bell, CheckCircle2, XCircle, MessageSquare, Zap, Target, Activity, X, Users, Scan, Trash2, AlertCircle, ShieldAlert } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -37,7 +37,7 @@ const LiveCountdown = ({ targetDate, eventName }) => {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.15),transparent_50%)] pointer-events-none" />
             <div className="absolute top-0 right-10 w-[1px] h-full bg-gradient-to-b from-transparent via-primary/20 to-transparent max-md:hidden" />
 
-            <div className="flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
+            <div className="flex flex-wrap md:flex-row justify-center items-center gap-10 relative z-10">
                 <div className="text-center md:text-left flex-1">
                     <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
                         <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse shadow-glow" />
@@ -46,13 +46,15 @@ const LiveCountdown = ({ targetDate, eventName }) => {
                     <h2 className="text-3xl md:text-4xl font-serif text-white uppercase italic tracking-widest">{eventName}</h2>
                 </div>
 
-                <div className="flex gap-4 sm:gap-6">
+                <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
                     {Object.entries(timeLeft).map(([unit, value]) => (
                         <div key={unit} className="flex flex-col items-center">
-                            <span className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40 tracking-widest tabular-nums w-14 sm:w-20 text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-                                {value.toString().padStart(2, '0')}
-                            </span>
-                            <span className="text-[9px] uppercase tracking-[0.5em] text-primary/70 font-black mt-2">{unit === 'd' ? 'Days' : unit === 'h' ? 'Hours' : unit === 'm' ? 'Mins' : 'Secs'}</span>
+                            <div className="h-[80px] sm:h-[110px] min-w-[80px] sm:min-w-[110px] px-2 bg-white/10 border-t border-l border-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center shadow-xl mb-3">
+                                <span className="text-5xl sm:text-[4rem] sm:leading-none font-bold text-white drop-shadow-lg">
+                                    {value.toString().padStart(2, '0')}
+                                </span>
+                            </div>
+                            <span className="text-[12px] sm:text-[15px] text-white/80 font-medium tracking-wide">{unit === 'd' ? 'Days' : unit === 'h' ? 'Hours' : unit === 'm' ? 'Minutes' : 'Seconds'}</span>
                         </div>
                     ))}
                 </div>
@@ -223,11 +225,20 @@ const Dashboard = () => {
     const getEventStatus = (event) => {
         const now = new Date();
         const start = new Date(event.start_date);
-        const end = new Date(event.end_date);
+        let end = event.end_date ? new Date(event.end_date) : new Date(start);
+
+        // Failsafe: if missing end date, default to end of the start day
+        if (isNaN(end.getTime()) || !event.end_date) {
+            end.setHours(23, 59, 59, 999);
+        }
+
+        // Failsafe: Handle old corrupted DB dates. 
+        // If the event started over 7 days ago, safely assume it's past regardless of a maliciously set future end_date.
+        const daysSinceStart = (now - start) / (1000 * 60 * 60 * 24);
+        if (now > end || daysSinceStart > 7) return 'past';
 
         if (now < start) return 'upcoming';
-        if (now >= start && now <= end) return 'ongoing';
-        return 'past';
+        return 'ongoing';
     };
 
     const handleRespondRequest = async (id, action) => {
@@ -294,7 +305,8 @@ const Dashboard = () => {
             setMissionTab('feed');
             fetchEventTasks(selectedEvent._id);
         } catch (error) {
-            toast.error('Failed to assign mission');
+            const errMsg = error?.response?.data?.message || error.message || 'Failed to assign mission';
+            toast.error(errMsg);
         }
     };
 
